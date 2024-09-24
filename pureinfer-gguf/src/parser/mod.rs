@@ -1,17 +1,22 @@
 mod typing;
-use std::io::{Cursor, Read};
 
 pub use typing::*;
 
-pub struct GGUFParser<'a>(Cursor<&'a [u8]>);
+pub struct GGUFParser<'a> {
+    bytes: &'a [u8],
+    offset: usize,
+}
 
 impl<'a> GGUFParser<'a> {
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
-        Self(Cursor::new(bytes))
+        Self { bytes, offset: 0 }
     }
     fn read_bytes(&mut self, len: usize) -> crate::Result<Vec<u8>> {
-        let mut buf = vec![0; len];
-        self.0.read_exact(&mut buf)?;
+        if self.offset + len > self.bytes.len() {
+            return Err(crate::Error::UnexpectedEOF);
+        }
+        let buf = self.bytes[self.offset..self.offset + len].to_vec();
+        self.offset = self.offset + len;
         Ok(buf)
     }
     fn read_string(&mut self) -> crate::Result<String> {
@@ -85,7 +90,7 @@ impl<'a> GGUFParser<'a> {
             value,
         })
     }
-    pub fn read_header(&mut self) -> crate::Result<GGUFHeader> {
+    fn read_header(&mut self) -> crate::Result<GGUFHeader> {
         let magic = self.read_bytes(4)?;
         if magic != b"GGUF" {
             return Err(crate::Error::MagicMismatch);
@@ -105,6 +110,52 @@ impl<'a> GGUFParser<'a> {
             tensor_count,
             metadata_kv_count,
             metadata_kv,
+        })
+    }
+    fn read_tensor(&mut self, alginment: u64) -> crate::Result<GGUFTensorMeta> {
+        let name = self.read_string()?;
+        let n_dimensions = self.read_bytes(4)?;
+        let n_dimensions = u32::from_le_bytes(n_dimensions.try_into().unwrap());
+        let mut shape = Vec::with_capacity(n_dimensions as usize);
+        for _ in 0..n_dimensions {
+            let dim = self.read_bytes(8)?;
+            shape.push(u64::from_le_bytes(dim.try_into().unwrap()));
+        }
+        let data_type = self.read_bytes(4)?;
+        let data_type = u32::from_le_bytes(data_type.try_into().unwrap());
+        let offset = self.read_bytes(8)?;
+        let offset = u64::from_le_bytes(offset.try_into().unwrap());
+        let offset = offset + (alginment - (offset % alginment)) % alginment;
+        Ok(GGUFTensorMeta {
+            name,
+            shape,
+            data_type: GGMLType::try_from(data_type)?,
+            offset,
+        })
+    }
+    pub fn parse(&mut self) -> crate::Result<GGUF> {
+        let header = self.read_header()?;
+        let mut tensors = Vec::with_capacity(header.tensor_count as usize);
+        let alginment = match header
+            .metadata_kv
+            .iter()
+            .find(|x| x.key == "general.alignment")
+            .map(|x| x.value.clone())
+            .unwrap_or(GGUFMetadataValue::Uint32(32))
+        {
+            GGUFMetadataValue::Uint32(v) => v,
+            _ => return Err(crate::Error::InvalidAlignmentMeta),
+        } as u64;
+        for _ in 0..header.tensor_count {
+            tensors.push(self.read_tensor(alginment)?);
+        }
+        let alginment = alginment as usize;
+        let offset = self.offset + (alginment - (self.offset % alginment)) % alginment;
+        let tensor_bytes = &self.bytes[offset..];
+        Ok(GGUF {
+            header,
+            tensors,
+            tensor_bytes,
         })
     }
 }

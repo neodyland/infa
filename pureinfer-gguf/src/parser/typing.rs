@@ -1,4 +1,19 @@
 #[derive(Debug, Clone)]
+pub struct GGUF<'a> {
+    pub header: GGUFHeader,
+    pub tensors: Vec<GGUFTensorMeta>,
+    pub tensor_bytes: &'a [u8],
+}
+
+#[derive(Debug, Clone)]
+pub struct GGUFTensorMeta {
+    pub name: String,
+    pub data_type: GGMLType,
+    pub shape: Vec<u64>,
+    pub offset: u64,
+}
+
+#[derive(Debug, Clone)]
 pub struct GGUFHeader {
     pub version: u32,
     pub tensor_count: u64,
@@ -98,4 +113,40 @@ pub enum GGMLType {
     F64 = 28,
     IQ1_M = 29,
     COUNT,
+}
+impl TryFrom<u32> for GGMLType {
+    type Error = crate::Error;
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(GGMLType::F32),
+            1 => Ok(GGMLType::F16),
+            2 => Ok(GGMLType::Q4_0),
+            3 => Ok(GGMLType::Q4_1),
+            6 => Ok(GGMLType::Q5_0),
+            7 => Ok(GGMLType::Q5_1),
+            8 => Ok(GGMLType::Q8_0),
+            9 => Ok(GGMLType::Q8_1),
+            10 => Ok(GGMLType::Q2_K),
+            11 => Ok(GGMLType::Q3_K),
+            12 => Ok(GGMLType::Q4_K),
+            13 => Ok(GGMLType::Q5_K),
+            14 => Ok(GGMLType::Q6_K),
+            15 => Ok(GGMLType::Q8_K),
+            16 => Ok(GGMLType::IQ2_XXS),
+            17 => Ok(GGMLType::IQ2_XS),
+            18 => Ok(GGMLType::IQ3_XXS),
+            19 => Ok(GGMLType::IQ1_S),
+            20 => Ok(GGMLType::IQ4_NL),
+            21 => Ok(GGMLType::IQ3_S),
+            22 => Ok(GGMLType::IQ2_S),
+            23 => Ok(GGMLType::IQ4_XS),
+            24 => Ok(GGMLType::I8),
+            25 => Ok(GGMLType::I16),
+            26 => Ok(GGMLType::I32),
+            27 => Ok(GGMLType::I64),
+            28 => Ok(GGMLType::F64),
+            29 => Ok(GGMLType::IQ1_M),
+            _ => Err(crate::Error::InvalidGGMLType(value)),
+        }
+    }
 }
