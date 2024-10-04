@@ -16,6 +16,14 @@ pub struct GGUFTensor {
     pub shape: Vec<u64>,
     pub bytes: Vec<u8>,
 }
+impl<R> GGUF<R>
+where
+    R: Read,
+{
+    pub fn tensor_names(&self) -> Vec<String> {
+        self.tensors.iter().map(|t| t.name.clone()).collect()
+    }
+}
 
 impl<R> GGUF<R>
 where
@@ -41,9 +49,6 @@ where
         } else {
             Err(crate::Error::NoSuchTensor(name.to_string()))
         }
-    }
-    pub fn tensor_names(&self) -> Vec<String> {
-        self.tensors.iter().map(|t| t.name.clone()).collect()
     }
 }
 
@@ -130,6 +135,8 @@ pub enum GGMLType {
     F16 = 1,
     Q4_0 = 2,
     Q4_1 = 3,
+    Q4_2 = 4,
+    Q4_3 = 5,
     Q5_0 = 6,
     Q5_1 = 7,
     Q8_0 = 8,
@@ -168,6 +175,8 @@ impl GGMLType {
             GGMLType::Q5_0 | GGMLType::Q5_1 | GGMLType::Q5_K => 5,
             GGMLType::Q4_0
             | GGMLType::Q4_1
+            | GGMLType::Q4_2
+            | GGMLType::Q4_3
             | GGMLType::Q4_K
             | GGMLType::IQ4_NL
             | GGMLType::IQ4_XS => 4,
@@ -187,6 +196,8 @@ impl TryFrom<u32> for GGMLType {
             1 => Ok(GGMLType::F16),
             2 => Ok(GGMLType::Q4_0),
             3 => Ok(GGMLType::Q4_1),
+            4 => Ok(GGMLType::Q4_2),
+            5 => Ok(GGMLType::Q4_3),
             6 => Ok(GGMLType::Q5_0),
             7 => Ok(GGMLType::Q5_1),
             8 => Ok(GGMLType::Q8_0),
