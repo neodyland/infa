@@ -1,7 +1,9 @@
+mod k_quants;
 mod typing;
 
 use std::io::Read;
 
+pub use k_quants::*;
 pub use typing::*;
 
 pub struct GGUFParser<R>

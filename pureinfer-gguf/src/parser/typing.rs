@@ -36,11 +36,12 @@ where
     pub fn get_tensor<'a>(&'a mut self, name: &str) -> crate::Result<GGUFTensor<'a>> {
         if let Some(tensor) = self.tensors.iter().find(|t| t.name == name) {
             let start = tensor.offset;
-            let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>() as f64;
-            let size = if size % 8.0 == 0.0 {
-                size as u64 / 8
+            let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>()
+                / tensor.data_type.block_size();
+            let size = if size % 8 == 0 {
+                size / 8
             } else {
-                size as u64 / 8 + 1
+                size / 8 + 1
             };
             let mut bytes = vec![0; size as usize];
             self.tensor_bytes
@@ -176,32 +177,43 @@ pub enum GGMLType {
 }
 
 impl GGMLType {
-    pub fn size(&self) -> f64 {
-        match self {
-            GGMLType::F64 | GGMLType::I64 => 64.0,
-            GGMLType::F32 | GGMLType::I32 => 32.0,
-            GGMLType::F16 | GGMLType::I16 | GGMLType::BF16 => 16.0,
-            GGMLType::Q8_0 | GGMLType::Q8_1 | GGMLType::Q8_K | GGMLType::I8 => 8.0,
-            GGMLType::Q6_K => 6.0,
-            GGMLType::Q5_0 | GGMLType::Q5_1 | GGMLType::Q5_K => 5.0,
+    pub fn block_size(&self) -> u64 {
+        (match self {
             GGMLType::Q4_0
             | GGMLType::Q4_1
-            | GGMLType::Q4_2
-            | GGMLType::Q4_3
-            | GGMLType::Q4_K
-            | GGMLType::IQ4_NL
-            | GGMLType::IQ4_XS
-            | GGMLType::Q4_0_4_4
-            | GGMLType::Q4_0_4_8
-            | GGMLType::Q4_0_8_8 => 4.0,
-            GGMLType::Q3_K | GGMLType::IQ3_S | GGMLType::IQ3_XXS => 3.0,
+            | GGMLType::Q5_0
+            | GGMLType::Q5_1
+            | GGMLType::Q8_0
+            | GGMLType::Q8_1 => 32,
             GGMLType::Q2_K
-            | GGMLType::IQ2_XXS
-            | GGMLType::IQ2_XS
-            | GGMLType::IQ2_S
-            | GGMLType::TQ2_0 => 2.0,
-            GGMLType::IQ1_S | GGMLType::IQ1_M | GGMLType::TQ1_0 => 1.0,
-        }
+            | GGMLType::Q3_K
+            | GGMLType::Q4_K
+            | GGMLType::Q5_K
+            | GGMLType::Q6_K
+            | GGMLType::Q8_K => 256,
+            GGMLType::F32 | GGMLType::F16 | GGMLType::BF16 => 1,
+            _ => unimplemented!(),
+        }) as u64
+    }
+    pub fn size(&self) -> u64 {
+        (match self {
+            GGMLType::F64 => 4,
+            GGMLType::F32 | GGMLType::I32 => 2,
+            GGMLType::F16 | GGMLType::BF16 => 1,
+            GGMLType::Q8_0 => std::mem::size_of::<crate::BlockQ8_0>(),
+            GGMLType::Q8_K => std::mem::size_of::<crate::BlockQ8K>(),
+            GGMLType::Q8_1 => std::mem::size_of::<crate::BlockQ8_1>(),
+            GGMLType::Q6_K => std::mem::size_of::<crate::BlockQ6K>(),
+            GGMLType::Q5_K => std::mem::size_of::<crate::BlockQ5K>(),
+            GGMLType::Q5_0 => std::mem::size_of::<crate::BlockQ5_0>(),
+            GGMLType::Q5_1 => std::mem::size_of::<crate::BlockQ5_1>(),
+            GGMLType::Q4_K => std::mem::size_of::<crate::BlockQ4K>(),
+            GGMLType::Q4_0 => std::mem::size_of::<crate::BlockQ4_0>(),
+            GGMLType::Q4_1 => std::mem::size_of::<crate::BlockQ4_1>(),
+            GGMLType::Q3_K => std::mem::size_of::<crate::BlockQ3K>(),
+            GGMLType::Q2_K => std::mem::size_of::<crate::BlockQ2K>(),
+            _ => unimplemented!(),
+        }) as u64
     }
 }
 
