@@ -1,9 +1,9 @@
-mod k_quants;
+mod quant_blocks;
 mod typing;
 
 use std::io::Read;
 
-pub use k_quants::*;
+pub use quant_blocks::*;
 pub use typing::*;
 
 pub struct GGUFParser<R>
