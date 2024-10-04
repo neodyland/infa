@@ -1,3 +1,5 @@
+use crate::GGUFMetadataValue;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Magic mismatch")]
@@ -10,8 +12,8 @@ pub enum Error {
     InvalidGGUFMetadataValueType(u32),
     #[error("Invalid GGML type: {0}")]
     InvalidGGMLType(u32),
-    #[error("Invalid alignment meta")]
-    InvalidAlignmentMeta,
+    #[error("Invalid alignment metaType: {0:?}")]
+    InvalidAlignmentMetaType(GGUFMetadataValue),
     #[error("No such tensor: {0}")]
     NoSuchTensor(String),
 }
