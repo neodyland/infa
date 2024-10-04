@@ -141,7 +141,6 @@ where
     }
     pub fn parse(mut self) -> crate::Result<GGUF<R>> {
         let header = self.read_header()?;
-        let mut tensors = Vec::with_capacity(header.tensor_count as usize);
         let alginment = match header
             .metadata_kv
             .iter()
@@ -152,6 +151,7 @@ where
             GGUFMetadataValue::Uint32(v) => v,
             _ => return Err(crate::Error::InvalidAlignmentMeta),
         } as u64;
+        let mut tensors = Vec::with_capacity(header.tensor_count as usize);
         for _ in 0..header.tensor_count {
             tensors.push(self.read_tensor(alginment)?);
         }
