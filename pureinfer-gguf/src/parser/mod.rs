@@ -1,21 +1,27 @@
 mod typing;
 
+use std::io::Read;
+
 pub use typing::*;
 
-pub struct GGUFParser<'a> {
-    bytes: &'a [u8],
+pub struct GGUFParser<R>
+where
+    R: Read,
+{
+    bytes: R,
     offset: usize,
 }
 
-impl<'a> GGUFParser<'a> {
-    pub fn from_bytes(bytes: &'a [u8]) -> Self {
+impl<R> GGUFParser<R>
+where
+    R: Read,
+{
+    pub fn new(bytes: R) -> Self {
         Self { bytes, offset: 0 }
     }
     fn read_bytes(&mut self, len: usize) -> crate::Result<Vec<u8>> {
-        if self.offset + len > self.bytes.len() {
-            return Err(crate::Error::UnexpectedEOF);
-        }
-        let buf = self.bytes[self.offset..self.offset + len].to_vec();
+        let mut buf = vec![0; len];
+        self.bytes.read_exact(&mut buf)?;
         self.offset = self.offset + len;
         Ok(buf)
     }
@@ -133,7 +139,7 @@ impl<'a> GGUFParser<'a> {
             offset,
         })
     }
-    pub fn parse(&mut self) -> crate::Result<GGUF> {
+    pub fn parse(mut self) -> crate::Result<GGUF<R>> {
         let header = self.read_header()?;
         let mut tensors = Vec::with_capacity(header.tensor_count as usize);
         let alginment = match header
@@ -150,12 +156,12 @@ impl<'a> GGUFParser<'a> {
             tensors.push(self.read_tensor(alginment)?);
         }
         let alginment = alginment as usize;
-        let offset = self.offset + (alginment - (self.offset % alginment)) % alginment;
-        let tensor_bytes = &self.bytes[offset..];
+        let mut b = vec![0; (alginment - (self.offset % alginment)) % alginment];
+        self.bytes.read_exact(&mut b)?;
         Ok(GGUF {
             header,
             tensors,
-            tensor_bytes,
+            tensor_bytes: self.bytes,
         })
     }
 }

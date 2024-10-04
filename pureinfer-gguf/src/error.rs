@@ -2,8 +2,8 @@
 pub enum Error {
     #[error("Magic mismatch")]
     MagicMismatch,
-    #[error("Unexpected EOF")]
-    UnexpectedEOF,
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
     #[error("Utf8 error: {0}")]
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     #[error("Invalid GGUF metadata value type: {0}")]
@@ -12,5 +12,7 @@ pub enum Error {
     InvalidGGMLType(u32),
     #[error("Invalid alignment meta")]
     InvalidAlignmentMeta,
+    #[error("No such tensor: {0}")]
+    NoSuchTensor(String),
 }
 pub(crate) type Result<T> = std::result::Result<T, Error>;

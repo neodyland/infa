@@ -1,8 +1,50 @@
+use std::io::{Read, Seek, SeekFrom};
+
 #[derive(Debug, Clone)]
-pub struct GGUF<'a> {
+pub struct GGUF<R>
+where
+    R: Read,
+{
     pub header: GGUFHeader,
     pub tensors: Vec<GGUFTensorMeta>,
-    pub tensor_bytes: &'a [u8],
+    pub(super) tensor_bytes: R,
+}
+
+#[derive(Debug, Clone)]
+pub struct GGUFTensor {
+    pub data_type: GGMLType,
+    pub shape: Vec<u64>,
+    pub bytes: Vec<u8>,
+}
+
+impl<R> GGUF<R>
+where
+    R: Read + Seek,
+{
+    pub fn get_tensor(&mut self, name: &str) -> crate::Result<GGUFTensor> {
+        if let Some(tensor) = self.tensors.iter().find(|t| &t.name == name) {
+            let start = tensor.offset;
+            let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>();
+            let size = if size % 8 == 0 {
+                size / 8
+            } else {
+                size / 8 + 1
+            };
+            let mut bytes = vec![0; size as usize];
+            self.tensor_bytes.seek(SeekFrom::Start(start))?;
+            self.tensor_bytes.read_exact(&mut bytes)?;
+            Ok(GGUFTensor {
+                data_type: tensor.data_type.clone(),
+                shape: tensor.shape.clone(),
+                bytes,
+            })
+        } else {
+            Err(crate::Error::NoSuchTensor(name.to_string()))
+        }
+    }
+    pub fn tensor_names(&self) -> Vec<String> {
+        self.tensors.iter().map(|t| t.name.clone()).collect()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -114,6 +156,29 @@ pub enum GGMLType {
     IQ1_M = 29,
     COUNT,
 }
+
+impl GGMLType {
+    pub fn size(&self) -> u64 {
+        match self {
+            GGMLType::F64 | GGMLType::I64 => 64,
+            GGMLType::F32 | GGMLType::I32 => 32,
+            GGMLType::F16 | GGMLType::I16 => 16,
+            GGMLType::Q8_0 | GGMLType::Q8_1 | GGMLType::Q8_K | GGMLType::I8 => 8,
+            GGMLType::Q6_K => 6,
+            GGMLType::Q5_0 | GGMLType::Q5_1 | GGMLType::Q5_K => 5,
+            GGMLType::Q4_0
+            | GGMLType::Q4_1
+            | GGMLType::Q4_K
+            | GGMLType::IQ4_NL
+            | GGMLType::IQ4_XS => 4,
+            GGMLType::Q3_K | GGMLType::IQ3_S | GGMLType::IQ3_XXS => 3,
+            GGMLType::Q2_K | GGMLType::IQ2_XXS | GGMLType::IQ2_XS | GGMLType::IQ2_S => 2,
+            GGMLType::IQ1_S | GGMLType::IQ1_M => 1,
+            GGMLType::COUNT => 0,
+        }
+    }
+}
+
 impl TryFrom<u32> for GGMLType {
     type Error = crate::Error;
     fn try_from(value: u32) -> Result<Self, Self::Error> {
