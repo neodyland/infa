@@ -156,12 +156,12 @@ where
             tensors.push(self.read_tensor(alignment)?);
         }
         let alignment = alignment as usize;
-        let mut b = vec![0; (alignment - (self.offset % alignment)) % alignment];
-        self.bytes.read_exact(&mut b)?;
+        self.offset += (alignment - (self.offset % alignment)) % alignment;
         Ok(GGUF {
             header,
             tensors,
             tensor_bytes: self.bytes,
+            offset: self.offset as u64,
         })
     }
 }
