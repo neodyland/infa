@@ -22,7 +22,7 @@ where
     fn read_bytes(&mut self, len: usize) -> crate::Result<Vec<u8>> {
         let mut buf = vec![0; len];
         self.bytes.read_exact(&mut buf)?;
-        self.offset = self.offset + len;
+        self.offset += len;
         Ok(buf)
     }
     fn read_string(&mut self) -> crate::Result<String> {

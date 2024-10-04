@@ -22,7 +22,7 @@ where
     R: Read + Seek,
 {
     pub fn get_tensor(&mut self, name: &str) -> crate::Result<GGUFTensor> {
-        if let Some(tensor) = self.tensors.iter().find(|t| &t.name == name) {
+        if let Some(tensor) = self.tensors.iter().find(|t| t.name == name) {
             let start = tensor.offset;
             let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>();
             let size = if size % 8 == 0 {
