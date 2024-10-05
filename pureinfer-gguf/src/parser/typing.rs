@@ -20,6 +20,9 @@ pub struct GGUFTensor<'a> {
 }
 
 impl<'a> GGUFTensor<'a> {
+    pub fn f32_size(&self) -> usize {
+        self.shape.iter().product::<u64>() as usize
+    }
     pub fn from_raw_parts<T>(
         bytes: Vec<u8>,
         size: usize,
@@ -283,7 +286,6 @@ impl GGMLType {
             Self::Q4_1 => std::mem::size_of::<crate::BlockQ4_1>(),
             Self::Q5_0 => std::mem::size_of::<crate::BlockQ5_0>(),
             Self::Q5_1 => std::mem::size_of::<crate::BlockQ5_1>(),
-            // https://github.com/ggerganov/llama.cpp/blob/468ea24fb4633a0d681f7ac84089566c1c6190cb/ggml.c#L932
             Self::Q8_0 => std::mem::size_of::<crate::BlockQ8_0>(),
             Self::Q8_1 => std::mem::size_of::<crate::BlockQ8_1>(),
             Self::Q2_K => std::mem::size_of::<crate::BlockQ2K>(),

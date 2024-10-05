@@ -1,9 +1,20 @@
-use half::{bf16, f16};
+use half::{bf16, f16, slice::HalfFloatSliceExt};
 
-pub trait GGUFBlock: Send + Sync {}
-pub trait BaseGGUFBlock {}
-
-impl<T> BaseGGUFBlock for T where T: GGUFBlock {}
+pub trait GGUFBlock: Send + Sync + Sized + Clone {
+    const DTYPE: crate::GGMLType = crate::GGMLType::F32;
+    const BLCK_SIZE: usize = 1;
+    #[allow(unused_variables)]
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        unimplemented!()
+    }
+    #[allow(unused_variables)]
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        unimplemented!()
+    }
+    fn zeros() -> Self {
+        unsafe { std::mem::MaybeUninit::zeroed().assume_init() }
+    }
+}
 
 pub const QK4_0: usize = 32;
 
@@ -19,7 +30,77 @@ const _: () = assert!(
     "wrong q4_0 block size/padding"
 );
 
-impl GGUFBlock for BlockQ4_0 {}
+impl GGUFBlock for BlockQ4_0 {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q4_0;
+
+    const BLCK_SIZE: usize = QK4_0;
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        let k = f.len();
+        let qk = Self::BLCK_SIZE;
+        if k % qk != 0 {
+            return Err(crate::Error::QuantizationError(format!(
+                "dequantize_row_q4_0: {k} is not divisible by {qk}"
+            )));
+        }
+
+        let nb = k / qk;
+        for i in 0..nb {
+            let d = s[i].d.to_f32();
+
+            for j in 0..(qk / 2) {
+                let x0 = (s[i].qs[j] & 0x0F) as i16 - 8;
+                let x1 = (s[i].qs[j] >> 4) as i16 - 8;
+
+                f[i * qk + j] = (x0 as f32) * d;
+                f[i * qk + j + qk / 2] = (x1 as f32) * d;
+            }
+        }
+        Ok(())
+    }
+
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        let qk = Self::BLCK_SIZE;
+        let k = s.len();
+        if k % qk != 0 {
+            return Err(crate::Error::QuantizationError(format!(
+                "{k} is not divisible by {qk}"
+            )));
+        };
+        let nb = k / qk;
+        if f.len() != nb {
+            return Err(crate::Error::QuantizationError(format!(
+                "size mismatch {} {} {}",
+                s.len(),
+                f.len(),
+                qk,
+            )));
+        }
+        for (i, ys) in s.iter_mut().enumerate() {
+            let mut amax = 0f32;
+            let mut max = 0f32;
+
+            let xs = &f[i * qk..(i + 1) * qk];
+            for &x in xs.iter() {
+                if amax < x.abs() {
+                    amax = x.abs();
+                    max = x;
+                }
+            }
+            let d = max / -8.0;
+            let id = if d != 0f32 { 1. / d } else { 0. };
+            ys.d = f16::from_f32(d);
+
+            for (j, q) in ys.qs.iter_mut().enumerate() {
+                let x0 = xs[j] * id;
+                let x1 = xs[qk / 2 + j] * id;
+                let xi0 = u8::min(15, (x0 + 8.5) as u8);
+                let xi1 = u8::min(15, (x1 + 8.5) as u8);
+                *q = xi0 | (xi1 << 4)
+            }
+        }
+        Ok(())
+    }
+}
 
 pub const QK4_1: usize = 32;
 #[repr(C)]
@@ -191,7 +272,11 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ2K>() == 2 * std::mem::size_of::<f16>() + QK_K / 16 + QK_K / 4,
     "wrong q2_K block size/padding"
 );
-impl GGUFBlock for BlockQ2K {}
+impl GGUFBlock for BlockQ2K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q2_K;
+
+    const BLCK_SIZE: usize = QK_K;
+}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -206,7 +291,11 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ3K>() == std::mem::size_of::<f16>() + QK_K / 4 + QK_K / 8 + 12,
     "wrong q3_K block size/padding"
 );
-impl GGUFBlock for BlockQ3K {}
+impl GGUFBlock for BlockQ3K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q3_K;
+
+    const BLCK_SIZE: usize = QK_K;
+}
 
 pub const QK4_K: usize = 64;
 #[repr(C)]
@@ -223,7 +312,11 @@ const _: () = assert!(
     "wrong q4_K block size/padding"
 );
 
-impl GGUFBlock for BlockQ4K {}
+impl GGUFBlock for BlockQ4K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q4_K;
+
+    const BLCK_SIZE: usize = QK4_K;
+}
 
 pub const K_SCALE_SIZE: usize = 12;
 pub const QK5_K: usize = 64;
@@ -242,7 +335,11 @@ const _: () = assert!(
         == 2 * std::mem::size_of::<f16>() + K_SCALE_SIZE + QK5_K / 2 + QK5_K / 8,
     "wrong q5_K block size/padding"
 );
-impl GGUFBlock for BlockQ5K {}
+impl GGUFBlock for BlockQ5K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q5_K;
+
+    const BLCK_SIZE: usize = QK_K;
+}
 
 pub const QK6_K: usize = 64;
 #[repr(C)]
@@ -259,7 +356,11 @@ const _: () = assert!(
     "wrong q6_K block size/padding"
 );
 
-impl GGUFBlock for BlockQ6K {}
+impl GGUFBlock for BlockQ6K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q6_K;
+
+    const BLCK_SIZE: usize = QK_K;
+}
 
 pub const QK8_K: usize = 64;
 #[repr(C)]
@@ -275,7 +376,11 @@ const _: () = assert!(
         == std::mem::size_of::<f32>() + QK8_K + QK8_K / 16 * std::mem::size_of::<i16>(),
     "wrong q8_K block size/padding"
 );
-impl GGUFBlock for BlockQ8K {}
+impl GGUFBlock for BlockQ8K {
+    const DTYPE: crate::GGMLType = crate::GGMLType::Q8_K;
+
+    const BLCK_SIZE: usize = QK_K;
+}
 
 pub const QK2_XXS_K: usize = 64;
 #[repr(C)]
@@ -417,10 +522,80 @@ const _: () = assert!(
 );
 impl GGUFBlock for BlockIq4XS {}
 
-impl GGUFBlock for f16 {}
+impl GGUFBlock for f16 {
+    const DTYPE: crate::GGMLType = crate::GGMLType::F16;
+    const BLCK_SIZE: usize = 1;
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        s.convert_to_f32_slice(f);
+        Ok(())
+    }
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        s.convert_from_f32_slice(f);
+        Ok(())
+    }
+}
 
-impl GGUFBlock for bf16 {}
+impl GGUFBlock for bf16 {
+    const DTYPE: crate::GGMLType = crate::GGMLType::BF16;
+    const BLCK_SIZE: usize = 1;
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        s.convert_to_f32_slice(f);
+        Ok(())
+    }
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        s.convert_from_f32_slice(f);
+        Ok(())
+    }
+}
 
-impl GGUFBlock for f32 {}
+impl GGUFBlock for f32 {
+    const DTYPE: crate::GGMLType = crate::GGMLType::F32;
+    const BLCK_SIZE: usize = 1;
+    #[allow(unused_variables)]
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        f.copy_from_slice(s);
+        Ok(())
+    }
+    #[allow(unused_variables)]
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        s.copy_from_slice(f);
+        Ok(())
+    }
+}
 
-impl<T> GGUFBlock for &[T] where T: GGUFBlock {}
+pub trait BaseGGUFBlock: Send + Sync {
+    fn to_f32(&self, elem: usize) -> crate::Result<Vec<f32>>;
+    fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self>
+    where
+        Self: Sized;
+}
+impl<T> BaseGGUFBlock for Vec<T>
+where
+    T: GGUFBlock,
+{
+    fn to_f32(&self, elem: usize) -> crate::Result<Vec<f32>> {
+        let mut f = vec![0.0; elem];
+        T::to_f32(self, &mut f)?;
+        Ok(f)
+    }
+    fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self> {
+        let mut s = vec![T::zeros(); elem];
+        T::from_f32(f, &mut s)?;
+        Ok(s)
+    }
+}
+
+impl<T> BaseGGUFBlock for &[T]
+where
+    T: GGUFBlock,
+{
+    fn to_f32(&self, elem: usize) -> crate::Result<Vec<f32>> {
+        self.to_vec().to_f32(elem)
+    }
+    #[allow(unused_variables)]
+    fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self> {
+        Err(crate::Error::QuantizationError(
+            "How are you calling this stupid function?".to_string(),
+        ))
+    }
+}

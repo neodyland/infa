@@ -16,5 +16,7 @@ pub enum Error {
     InvalidAlignmentMetaType(GGUFMetadataValue),
     #[error("No such tensor: {0}")]
     NoSuchTensor(String),
+    #[error("Quantization error: {0}")]
+    QuantizationError(String),
 }
 pub(crate) type Result<T> = std::result::Result<T, Error>;
