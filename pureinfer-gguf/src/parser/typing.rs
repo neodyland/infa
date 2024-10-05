@@ -15,7 +15,7 @@ where
 
 pub struct GGUFTensor<'a> {
     pub shape: &'a Vec<u64>,
-    pub bytes: Box<dyn crate::GGUFBlock>,
+    pub bytes: Box<dyn crate::BaseGGUFBlock>,
     pub data_type: &'a GGMLType,
 }
 
@@ -72,13 +72,67 @@ where
                     &tensor.shape,
                     &tensor.data_type,
                 ),
+                GGMLType::Q4_1 => GGUFTensor::from_raw_parts::<crate::BlockQ4_1>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q5_0 => GGUFTensor::from_raw_parts::<crate::BlockQ5_0>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q5_1 => GGUFTensor::from_raw_parts::<crate::BlockQ5_1>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q8_0 => GGUFTensor::from_raw_parts::<crate::BlockQ8_0>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q8_1 => GGUFTensor::from_raw_parts::<crate::BlockQ8_1>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q2_K => GGUFTensor::from_raw_parts::<crate::BlockQ2K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q3_K => GGUFTensor::from_raw_parts::<crate::BlockQ3K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
                 GGMLType::Q4_K => GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
+                GGMLType::Q5_K => GGUFTensor::from_raw_parts::<crate::BlockQ5K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
                 GGMLType::Q6_K => GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q8_K => GGUFTensor::from_raw_parts::<crate::BlockQ8K>(
                     bytes,
                     size,
                     &tensor.shape,
@@ -96,7 +150,7 @@ where
                 GGMLType::F32 => {
                     GGUFTensor::from_raw_parts::<f32>(bytes, size, &tensor.shape, &tensor.data_type)
                 }
-                _ => unimplemented!("{:?}", tensor.data_type),
+                _ => unimplemented!(),
             })
         } else {
             Err(crate::Error::NoSuchTensor(name.to_string()))

@@ -1,6 +1,9 @@
 use half::{bf16, f16};
 
 pub trait GGUFBlock: Send + Sync {}
+pub trait BaseGGUFBlock {}
+
+impl<T> BaseGGUFBlock for T where T: GGUFBlock {}
 
 pub const QK4_0: usize = 32;
 
@@ -46,6 +49,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ5_0>() == std::mem::size_of::<f16>() + 4 + QK5_0 / 2,
     "wrong q5_0 block size/padding"
 );
+impl GGUFBlock for BlockQ5_0 {}
 
 pub const QK5_1: usize = 32;
 
@@ -61,6 +65,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ5_1>() == 2 * std::mem::size_of::<f16>() + 4 + QK5_1 / 2,
     "wrong q5_1 block size/padding"
 );
+impl GGUFBlock for BlockQ5_1 {}
 
 pub const QK8_0: usize = 32;
 
@@ -75,6 +80,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ8_0>() == std::mem::size_of::<f16>() + QK8_0,
     "wrong q8_0 block size/padding"
 );
+impl GGUFBlock for BlockQ8_0 {}
 
 pub const QK8_1: usize = 32;
 
@@ -89,6 +95,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ8_1>() == 2 * std::mem::size_of::<f16>() + QK8_1,
     "wrong q8_1 block size/padding"
 );
+impl GGUFBlock for BlockQ8_1 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -101,6 +108,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ4_0x4>() == 4 * std::mem::size_of::<f16>() + QK4_0 * 2,
     "wrong q4_0x4 block size/padding"
 );
+impl GGUFBlock for BlockQ4_0x4 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +121,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ4_0x8>() == 8 * std::mem::size_of::<f16>() + QK4_0 * 4,
     "wrong q4_0x8 block size/padding"
 );
+impl GGUFBlock for BlockQ4_0x8 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -125,6 +134,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ8_0x4>() == 4 * std::mem::size_of::<f16>() + QK8_0 * 4,
     "wrong q8_0x4 block size/padding"
 );
+impl GGUFBlock for BlockQ8_0x4 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -137,6 +147,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ8_0x8>() == 8 * std::mem::size_of::<f16>() + QK8_0 * 8,
     "wrong q8_0x8 block size/padding"
 );
+impl GGUFBlock for BlockQ8_0x8 {}
 
 pub const QK_K: usize = 256;
 
@@ -153,6 +164,7 @@ const _: () = assert!(
         == std::mem::size_of::<f16>() + QK_K / 64 + (QK_K - 4 * QK_K / 64) / 5,
     "wrong tq1_0 block size/padding"
 );
+impl GGUFBlock for BlockTq1_0 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -165,6 +177,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockTq2_0>() == std::mem::size_of::<f16>() + QK_K / 4,
     "wrong tq2_0 block size/padding"
 );
+impl GGUFBlock for BlockTq2_0 {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -178,6 +191,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ2K>() == 2 * std::mem::size_of::<f16>() + QK_K / 16 + QK_K / 4,
     "wrong q2_K block size/padding"
 );
+impl GGUFBlock for BlockQ2K {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -192,6 +206,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ3K>() == std::mem::size_of::<f16>() + QK_K / 4 + QK_K / 8 + 12,
     "wrong q3_K block size/padding"
 );
+impl GGUFBlock for BlockQ3K {}
 
 pub const QK4_K: usize = 64;
 #[repr(C)]
@@ -227,6 +242,7 @@ const _: () = assert!(
         == 2 * std::mem::size_of::<f16>() + K_SCALE_SIZE + QK5_K / 2 + QK5_K / 8,
     "wrong q5_K block size/padding"
 );
+impl GGUFBlock for BlockQ5K {}
 
 pub const QK6_K: usize = 64;
 #[repr(C)]
@@ -259,6 +275,7 @@ const _: () = assert!(
         == std::mem::size_of::<f32>() + QK8_K + QK8_K / 16 * std::mem::size_of::<i16>(),
     "wrong q8_K block size/padding"
 );
+impl GGUFBlock for BlockQ8K {}
 
 pub const QK2_XXS_K: usize = 64;
 #[repr(C)]
@@ -274,6 +291,7 @@ const _: () = assert!(
     "wrong iq2_xxs block size/padding"
 );
 
+impl GGUFBlock for BlockIq2XXS {}
 // 2.3125 bpw quants
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -288,6 +306,7 @@ const _: () = assert!(
         == std::mem::size_of::<f16>() + QK_K / 8 * std::mem::size_of::<u16>() + QK_K / 32,
     "wrong iq2_xs block size/padding"
 );
+impl GGUFBlock for BlockIq2XS {}
 
 // 2.5625 bpw quants
 #[repr(C)]
@@ -303,6 +322,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq2S>() == std::mem::size_of::<f16>() + QK_K / 4 + QK_K / 16,
     "wrong iq2_s block size/padding"
 );
+impl GGUFBlock for BlockIq2S {}
 
 // 3.0625 bpw quants
 #[repr(C)]
@@ -316,6 +336,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq3XXS>() == std::mem::size_of::<f16>() + 3 * (QK_K / 8),
     "wrong iq3_xxs block size/padding"
 );
+impl GGUFBlock for BlockIq3XXS {}
 
 // 3.4375 bpw
 const IQ3S_N_SCALE: usize = QK_K / 64;
@@ -334,6 +355,7 @@ const _: () = assert!(
         == std::mem::size_of::<f16>() + 13 * (QK_K / 32) + IQ3S_N_SCALE,
     "wrong iq3_s block size/padding"
 );
+impl GGUFBlock for BlockIq3S {}
 
 // 1.5625 bpw
 #[repr(C)]
@@ -348,6 +370,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq1S>() == std::mem::size_of::<f16>() + QK_K / 8 + QK_K / 16,
     "wrong iq1_s block size/padding"
 );
+impl GGUFBlock for BlockIq1S {}
 
 // 1.75 bpw
 #[repr(C)]
@@ -362,6 +385,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq1M>() == QK_K / 8 + QK_K / 16 + QK_K / 32,
     "wrong iq1_m block size/padding"
 );
+impl GGUFBlock for BlockIq1M {}
 // Non-linear quants
 pub const QK4_NL: usize = 32;
 #[repr(C)]
@@ -375,6 +399,7 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq4NL>() == std::mem::size_of::<f16>() + QK4_NL / 2,
     "wrong iq4_nl block size/padding"
 );
+impl GGUFBlock for BlockIq4NL {}
 
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
@@ -390,6 +415,7 @@ const _: () = assert!(
         == std::mem::size_of::<f16>() + std::mem::size_of::<u16>() + QK_K / 64 + QK_K / 2,
     "wrong iq4_xs block size/padding"
 );
+impl GGUFBlock for BlockIq4XS {}
 
 impl GGUFBlock for f16 {}
 
