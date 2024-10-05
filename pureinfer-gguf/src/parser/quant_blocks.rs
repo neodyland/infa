@@ -1,8 +1,11 @@
-use half::f16;
+use half::{bf16, f16};
+
+pub trait GGUFBlock: Send + Sync {}
 
 pub const QK4_0: usize = 32;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4_0 {
     d: f16,              // delta
     qs: [u8; QK4_0 / 2], // nibbles / quants
@@ -13,8 +16,11 @@ const _: () = assert!(
     "wrong q4_0 block size/padding"
 );
 
+impl GGUFBlock for BlockQ4_0 {}
+
 pub const QK4_1: usize = 32;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4_1 {
     pub(crate) d: f16,
     pub(crate) m: f16,
@@ -24,10 +30,12 @@ const _: () = assert!(
     std::mem::size_of::<BlockQ4_1>() == 2 * std::mem::size_of::<f16>() + QK4_1 / 2,
     "wrong q4_1 block size/padding"
 );
+impl GGUFBlock for BlockQ4_1 {}
 
 pub const QK5_0: usize = 32;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ5_0 {
     d: f16,              // delta
     qh: [u8; 4],         // 5-th bit of quants
@@ -42,6 +50,7 @@ const _: () = assert!(
 pub const QK5_1: usize = 32;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ5_1 {
     pub dm: [f16; 2],        // delta and min
     pub qh: [u8; 4],         // 5-th bit of quants
@@ -56,6 +65,7 @@ const _: () = assert!(
 pub const QK8_0: usize = 32;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ8_0 {
     pub d: f16,          // delta
     pub qs: [i8; QK8_0], // quants
@@ -69,6 +79,7 @@ const _: () = assert!(
 pub const QK8_1: usize = 32;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ8_1 {
     pub ds: [f16; 2],    // delta and d * sum(qs[i])
     pub qs: [i8; QK8_1], // quants
@@ -80,6 +91,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4_0x4 {
     pub d: [f16; 4],         // deltas for 4 q4_0 blocks
     pub qs: [u8; QK4_0 * 2], // nibbles / quants for 4 q4_0 blocks
@@ -91,6 +103,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4_0x8 {
     pub d: [f16; 8],         // deltas for 8 q4_0 blocks
     pub qs: [u8; QK4_0 * 4], // nibbles / quants for 8 q4_0 blocks
@@ -102,6 +115,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ8_0x4 {
     pub d: [f16; 4],         // deltas for 4 q8_0 blocks
     pub qs: [i8; QK8_0 * 4], // quants for 4 q8_0 blocks
@@ -113,6 +127,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ8_0x8 {
     pub d: [f16; 8],         // deltas for 8 q8_0 blocks
     pub qs: [i8; QK8_0 * 8], // quants for 8 q8_0 blocks
@@ -126,6 +141,7 @@ const _: () = assert!(
 pub const QK_K: usize = 256;
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockTq1_0 {
     pub qs: [u8; (QK_K - 4 * QK_K / 64) / 5], // 5 elements per byte (3^5 = 243 < 256)
     pub qh: [u8; QK_K / 64],                  // 4 elements per byte
@@ -139,6 +155,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockTq2_0 {
     pub qs: [u8; QK_K / 4], // 2 bits per element
     pub d: f16,             // delta
@@ -150,6 +167,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ2K {
     pub scales: [u8; QK_K / 16], // scales and mins, quantized with 4 bits
     pub qs: [u8; QK_K / 4],      // quants
@@ -162,6 +180,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ3K {
     d: f16,           // super-block scale
     scales: [u8; 12], // quantized scales
@@ -176,6 +195,7 @@ const _: () = assert!(
 
 pub const QK4_K: usize = 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4K {
     d: f16,                     // super-block scale for quantized scales
     dmin: f16,                  // super-block scale for quantized mins
@@ -188,9 +208,12 @@ const _: () = assert!(
     "wrong q4_K block size/padding"
 );
 
+impl GGUFBlock for BlockQ4K {}
+
 pub const K_SCALE_SIZE: usize = 12;
 pub const QK5_K: usize = 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ5K {
     d: f16,                     // super-block scale for quantized scales
     dmin: f16,                  // super-block scale for quantized mins
@@ -207,6 +230,7 @@ const _: () = assert!(
 
 pub const QK6_K: usize = 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ6K {
     ql: [u8; QK6_K / 2],      // quants, lower 4 bits
     qh: [u8; QK6_K / 4],      // quants, upper 2 bits
@@ -219,8 +243,11 @@ const _: () = assert!(
     "wrong q6_K block size/padding"
 );
 
+impl GGUFBlock for BlockQ6K {}
+
 pub const QK8_K: usize = 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ8K {
     d: f32,                   // delta
     qs: [i8; QK8_K],          // quants
@@ -235,6 +262,7 @@ const _: () = assert!(
 
 pub const QK2_XXS_K: usize = 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq2XXS {
     d: f16,                   // delta
     qs: [u16; QK2_XXS_K / 8], // quants
@@ -248,6 +276,7 @@ const _: () = assert!(
 
 // 2.3125 bpw quants
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq2XS {
     d: f16,
     qs: [u16; QK_K / 8],
@@ -262,6 +291,7 @@ const _: () = assert!(
 
 // 2.5625 bpw quants
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq2S {
     d: f16,
     qs: [u8; QK_K / 4],
@@ -276,6 +306,7 @@ const _: () = assert!(
 
 // 3.0625 bpw quants
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq3XXS {
     d: f16,
     qs: [u8; 3 * QK_K / 8],
@@ -289,6 +320,7 @@ const _: () = assert!(
 // 3.4375 bpw
 const IQ3S_N_SCALE: usize = QK_K / 64;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq3S {
     d: f16,
     qs: [u8; QK_K / 4],
@@ -305,6 +337,7 @@ const _: () = assert!(
 
 // 1.5625 bpw
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq1S {
     d: f16,
     qs: [u8; QK_K / 8],
@@ -318,6 +351,7 @@ const _: () = assert!(
 
 // 1.75 bpw
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq1M {
     qs: [u8; QK_K / 8],
     qh: [u8; QK_K / 16],
@@ -328,17 +362,10 @@ const _: () = assert!(
     std::mem::size_of::<BlockIq1M>() == QK_K / 8 + QK_K / 16 + QK_K / 32,
     "wrong iq1_m block size/padding"
 );
-
-// Used by IQ1_M quants
-#[repr(C)]
-pub union Iq1mScale {
-    f16: f16,
-    u16: u16,
-}
-
 // Non-linear quants
 pub const QK4_NL: usize = 32;
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq4NL {
     d: f16,
     qs: [u8; QK4_NL / 2],
@@ -350,6 +377,7 @@ const _: () = assert!(
 );
 
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockIq4XS {
     d: f16,
     scales_h: u16,
@@ -362,3 +390,11 @@ const _: () = assert!(
         == std::mem::size_of::<f16>() + std::mem::size_of::<u16>() + QK_K / 64 + QK_K / 2,
     "wrong iq4_xs block size/padding"
 );
+
+impl GGUFBlock for f16 {}
+
+impl GGUFBlock for bf16 {}
+
+impl GGUFBlock for f32 {}
+
+impl<T> GGUFBlock for &[T] where T: GGUFBlock {}

@@ -1,5 +1,7 @@
 use std::io::{Read, Seek, SeekFrom};
 
+use half::{bf16, f16};
+
 #[derive(Debug, Clone)]
 pub struct GGUF<R>
 where
@@ -11,12 +13,33 @@ where
     pub(super) offset: u64,
 }
 
-#[derive(Debug, Clone)]
 pub struct GGUFTensor<'a> {
-    pub data_type: &'a GGMLType,
     pub shape: &'a Vec<u64>,
-    pub bytes: Vec<u8>,
+    pub bytes: Box<dyn crate::GGUFBlock>,
+    pub data_type: &'a GGMLType,
 }
+
+impl<'a> GGUFTensor<'a> {
+    pub fn from_raw_parts<T>(
+        bytes: Vec<u8>,
+        size: usize,
+        shape: &'a Vec<u64>,
+        data_type: &'a GGMLType,
+    ) -> Self
+    where
+        T: crate::GGUFBlock + 'static,
+    {
+        let raw_data_ptr = bytes.as_ptr();
+        let n_blocks = size / std::mem::size_of::<T>();
+        let bytes = unsafe { std::slice::from_raw_parts(raw_data_ptr as *const T, n_blocks) };
+        Self {
+            shape,
+            bytes: Box::new(bytes),
+            data_type,
+        }
+    }
+}
+
 impl<R> GGUF<R>
 where
     R: Read,
@@ -42,10 +65,38 @@ where
             self.tensor_bytes
                 .seek(SeekFrom::Start(start + self.offset))?;
             self.tensor_bytes.read_exact(&mut bytes)?;
-            Ok(GGUFTensor {
-                data_type: &tensor.data_type,
-                shape: &tensor.shape,
-                bytes,
+            Ok(match tensor.data_type {
+                GGMLType::Q4_0 => GGUFTensor::from_raw_parts::<crate::BlockQ4_0>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q4_K => GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::Q6_K => GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::BF16 => GGUFTensor::from_raw_parts::<bf16>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::F16 => {
+                    GGUFTensor::from_raw_parts::<f16>(bytes, size, &tensor.shape, &tensor.data_type)
+                }
+                GGMLType::F32 => {
+                    GGUFTensor::from_raw_parts::<f32>(bytes, size, &tensor.shape, &tensor.data_type)
+                }
+                _ => unimplemented!("{:?}", tensor.data_type),
             })
         } else {
             Err(crate::Error::NoSuchTensor(name.to_string()))
