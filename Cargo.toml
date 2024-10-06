@@ -1,3 +1,8 @@
 [workspace]
-members = ["pureinfer-gguf"]
+package.version = "0.1.0"
+members = ["infa-core", "infa-gguf", "infa-impl"]
 resolver = "2"
+
+[workspace.dependencies]
+half = "2.4.1"
+thiserror = "1.0.64"

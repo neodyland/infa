@@ -25,20 +25,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "infa-core"
+version = "0.1.0"
+dependencies = [
+ "infa-gguf",
+ "infa-impl",
+]
+
+[[package]]
+name = "infa-gguf"
+version = "0.1.0"
+dependencies = [
+ "half",
+ "infa-impl",
+ "thiserror",
+]
+
+[[package]]
+name = "infa-impl"
+version = "0.1.0"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "pureinfer-gguf"
-version = "0.1.0"
-dependencies = [
- "half",
- "thiserror",
 ]
 
 [[package]]

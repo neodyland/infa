@@ -1,11 +1,13 @@
 mod quant_block_utils;
 mod quant_blocks;
+mod tensor;
 mod typing;
 
 use std::io::Read;
 
 pub(crate) use quant_block_utils::*;
 pub use quant_blocks::*;
+pub use tensor::*;
 pub use typing::*;
 
 pub struct GGUFParser<R>

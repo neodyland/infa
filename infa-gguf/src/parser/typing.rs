@@ -13,36 +13,6 @@ where
     pub(super) offset: u64,
 }
 
-pub struct GGUFTensor<'a> {
-    pub shape: &'a Vec<u64>,
-    pub bytes: Box<dyn crate::BaseGGUFBlock>,
-    pub data_type: &'a GGMLType,
-}
-
-impl<'a> GGUFTensor<'a> {
-    pub fn f32_size(&self) -> usize {
-        self.shape.iter().product::<u64>() as usize
-    }
-    pub(crate) fn from_raw_parts<T>(
-        bytes: Vec<u8>,
-        size: usize,
-        shape: &'a Vec<u64>,
-        data_type: &'a GGMLType,
-    ) -> Self
-    where
-        T: crate::GGUFBlock + 'static,
-    {
-        let raw_data_ptr = bytes.as_ptr();
-        let n_blocks = size / std::mem::size_of::<T>();
-        let bytes = unsafe { std::slice::from_raw_parts(raw_data_ptr as *const T, n_blocks) };
-        Self {
-            shape,
-            bytes: Box::new(bytes),
-            data_type,
-        }
-    }
-}
-
 impl<R> GGUF<R>
 where
     R: Read,
@@ -59,7 +29,7 @@ impl<R> GGUF<R>
 where
     R: Read + Seek,
 {
-    pub fn get_tensor<'a>(&'a mut self, name: &str) -> crate::Result<GGUFTensor<'a>> {
+    pub fn get_tensor(&mut self, name: &str) -> crate::Result<crate::GGUFTensor> {
         if let Some(tensor) = self.tensors.iter().find(|t| t.name == name) {
             let start = tensor.offset;
             let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>() as usize
@@ -69,90 +39,96 @@ where
                 .seek(SeekFrom::Start(start + self.offset))?;
             self.tensor_bytes.read_exact(&mut bytes)?;
             Ok(match tensor.data_type {
-                GGMLType::Q4_0 => GGUFTensor::from_raw_parts::<crate::BlockQ4_0>(
+                GGMLType::Q4_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_0>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q4_1 => GGUFTensor::from_raw_parts::<crate::BlockQ4_1>(
+                GGMLType::Q4_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_1>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q5_0 => GGUFTensor::from_raw_parts::<crate::BlockQ5_0>(
+                GGMLType::Q5_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_0>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q5_1 => GGUFTensor::from_raw_parts::<crate::BlockQ5_1>(
+                GGMLType::Q5_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_1>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q8_0 => GGUFTensor::from_raw_parts::<crate::BlockQ8_0>(
+                GGMLType::Q8_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_0>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q8_1 => GGUFTensor::from_raw_parts::<crate::BlockQ8_1>(
+                GGMLType::Q8_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_1>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q2_K => GGUFTensor::from_raw_parts::<crate::BlockQ2K>(
+                GGMLType::Q2_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ2K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q3_K => GGUFTensor::from_raw_parts::<crate::BlockQ3K>(
+                GGMLType::Q3_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ3K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q4_K => GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
+                GGMLType::Q4_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q5_K => GGUFTensor::from_raw_parts::<crate::BlockQ5K>(
+                GGMLType::Q5_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q6_K => GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
+                GGMLType::Q6_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::Q8_K => GGUFTensor::from_raw_parts::<crate::BlockQ8K>(
+                GGMLType::Q8_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8K>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::BF16 => GGUFTensor::from_raw_parts::<bf16>(
+                GGMLType::BF16 => crate::GGUFTensor::from_raw_parts::<bf16>(
                     bytes,
                     size,
                     &tensor.shape,
                     &tensor.data_type,
                 ),
-                GGMLType::F16 => {
-                    GGUFTensor::from_raw_parts::<f16>(bytes, size, &tensor.shape, &tensor.data_type)
-                }
-                GGMLType::F32 => {
-                    GGUFTensor::from_raw_parts::<f32>(bytes, size, &tensor.shape, &tensor.data_type)
-                }
+                GGMLType::F16 => crate::GGUFTensor::from_raw_parts::<f16>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
+                GGMLType::F32 => crate::GGUFTensor::from_raw_parts::<f32>(
+                    bytes,
+                    size,
+                    &tensor.shape,
+                    &tensor.data_type,
+                ),
                 _ => unimplemented!(),
             })
         } else {

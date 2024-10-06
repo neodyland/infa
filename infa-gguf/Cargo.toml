@@ -1,0 +1,9 @@
+[package]
+name = "infa-gguf"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+half.workspace = true
+thiserror.workspace = true
+infa-impl = {path = "../infa-impl" }

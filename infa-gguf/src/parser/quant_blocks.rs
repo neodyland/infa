@@ -759,6 +759,7 @@ pub trait BaseGGUFBlock: Send + Sync {
     where
         Self: Sized;
 }
+
 impl<T> BaseGGUFBlock for Vec<T>
 where
     T: GGUFBlock,

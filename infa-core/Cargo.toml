@@ -1,0 +1,12 @@
+[package]
+name = "infa-core"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+infa-gguf = { path = "../infa-gguf", optional = true }
+infa-impl = {path = "../infa-impl" }
+
+[features]
+default = ["gguf"]
+gguf = ["dep:infa-gguf"]
