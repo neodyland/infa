@@ -3,20 +3,40 @@ pub enum Tensor {
     GGUFTensor(infa_gguf::GGUFTensor),
 }
 
-impl std::ops::Add<Tensor> for Tensor {
-    type Output = crate::Result<Self>;
+impl std::ops::Add<&Tensor> for &Tensor {
+    type Output = crate::Result<Tensor>;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: &Tensor) -> Self::Output {
         Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
             (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor((lhs + rhs)?),
         })
     }
 }
-impl std::ops::Sub<Tensor> for Tensor {
-    type Output = crate::Result<Self>;
+impl std::ops::Add<&Tensor> for Tensor {
+    type Output = crate::Result<Tensor>;
 
-    fn sub(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: &Tensor) -> Self::Output {
+        Ok(match (self, rhs) {
+            #[cfg(feature = "gguf")]
+            (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor((&lhs + rhs)?),
+        })
+    }
+}
+impl std::ops::Sub<&Tensor> for Tensor {
+    type Output = crate::Result<Tensor>;
+
+    fn sub(self, rhs: &Tensor) -> Self::Output {
+        Ok(match (self, rhs) {
+            #[cfg(feature = "gguf")]
+            (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor((&lhs - rhs)?),
+        })
+    }
+}
+impl std::ops::Sub<&Tensor> for &Tensor {
+    type Output = crate::Result<Tensor>;
+
+    fn sub(self, rhs: &Tensor) -> Self::Output {
         Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
             (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor((lhs - rhs)?),
@@ -24,8 +44,17 @@ impl std::ops::Sub<Tensor> for Tensor {
     }
 }
 
-impl infa_impl::TensorOps<Tensor, crate::Error> for Tensor {
-    fn shape(&self) -> &Vec<u64> {
+impl infa_impl::TensorOps<'_, Tensor, crate::Error> for &Tensor {
+    fn shape(&self) -> Vec<u64> {
+        match self {
+            #[cfg(feature = "gguf")]
+            Tensor::GGUFTensor(t) => t.shape(),
+        }
+    }
+}
+
+impl infa_impl::TensorOps<'_, Tensor, crate::Error> for Tensor {
+    fn shape(&self) -> Vec<u64> {
         match self {
             #[cfg(feature = "gguf")]
             Tensor::GGUFTensor(t) => t.shape(),
