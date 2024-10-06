@@ -51,6 +51,13 @@ impl infa_impl::TensorOps<'_, Tensor, crate::Error> for &Tensor {
             Tensor::GGUFTensor(t) => t.shape(),
         }
     }
+
+    fn reshape(&self, shape: Vec<u64>) -> Result<Tensor, crate::Error> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            Tensor::GGUFTensor(t) => Tensor::GGUFTensor(t.reshape(shape)?),
+        })
+    }
 }
 
 impl infa_impl::TensorOps<'_, Tensor, crate::Error> for Tensor {
@@ -59,5 +66,11 @@ impl infa_impl::TensorOps<'_, Tensor, crate::Error> for Tensor {
             #[cfg(feature = "gguf")]
             Tensor::GGUFTensor(t) => t.shape(),
         }
+    }
+    fn reshape(&self, shape: Vec<u64>) -> Result<Tensor, crate::Error> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            Tensor::GGUFTensor(t) => Tensor::GGUFTensor(t.reshape(shape)?),
+        })
     }
 }

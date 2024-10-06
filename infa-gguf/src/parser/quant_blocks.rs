@@ -758,6 +758,8 @@ pub trait BaseGGUFBlock: Send + Sync {
     fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self>
     where
         Self: Sized;
+    fn as_ptr(&self) -> *const u8;
+    fn bytes_size(&self) -> usize;
 }
 
 impl<T> BaseGGUFBlock for Vec<T>
@@ -774,21 +776,11 @@ where
         T::from_f32(f, &mut s)?;
         Ok(s)
     }
-}
-
-impl<T> BaseGGUFBlock for &[T]
-where
-    T: GGUFBlock,
-{
-    fn to_f32(&self, elem: usize) -> crate::Result<Vec<f32>> {
-        let mut f = vec![0.0; elem];
-        T::to_f32(self, &mut f)?;
-        Ok(f)
+    fn as_ptr(&self) -> *const u8 {
+        self.as_ptr() as *const u8
     }
-    #[allow(unused_variables)]
-    fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self> {
-        Err(crate::Error::QuantizationError(
-            "How are you calling this stupid function?".to_string(),
-        ))
+
+    fn bytes_size(&self) -> usize {
+        self.len() * std::mem::size_of::<T>()
     }
 }

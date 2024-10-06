@@ -1,7 +1,5 @@
 use std::io::{Read, Seek, SeekFrom};
 
-use half::{bf16, f16};
-
 #[derive(Debug, Clone)]
 pub struct GGUF<R>
 where
@@ -38,99 +36,12 @@ where
             self.tensor_bytes
                 .seek(SeekFrom::Start(start + self.offset))?;
             self.tensor_bytes.read_exact(&mut bytes)?;
-            Ok(match tensor.data_type {
-                GGMLType::Q4_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_0>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q4_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_1>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q5_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_0>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q5_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_1>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q8_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_0>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q8_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_1>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q2_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ2K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q3_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ3K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q4_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q5_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q6_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::Q8_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8K>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::BF16 => crate::GGUFTensor::from_raw_parts::<bf16>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::F16 => crate::GGUFTensor::from_raw_parts::<f16>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                GGMLType::F32 => crate::GGUFTensor::from_raw_parts::<f32>(
-                    bytes,
-                    size,
-                    &tensor.shape,
-                    &tensor.data_type,
-                ),
-                _ => unimplemented!(),
-            })
+            Ok(crate::GGUFTensor::from_data(
+                &tensor.data_type,
+                tensor.shape.clone(),
+                size,
+                bytes,
+            ))
         } else {
             Err(crate::Error::NoSuchTensor(name.to_string()))
         }
