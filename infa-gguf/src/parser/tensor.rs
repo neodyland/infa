@@ -49,6 +49,27 @@ impl std::ops::Add<GGUFTensor> for GGUFTensor {
         })
     }
 }
+impl std::ops::Sub<GGUFTensor> for GGUFTensor {
+    type Output = crate::Result<Self>;
+
+    fn sub(self, rhs: GGUFTensor) -> Self::Output {
+        if self.shape != rhs.shape {
+            return Err(crate::Error::OpError(format!(
+                "Cannot add tensors with different shapes"
+            )));
+        }
+        let rhs = rhs.bytes.to_f32(rhs.f32_size()).unwrap();
+        let mut lhs = self.bytes.to_f32(self.f32_size()).unwrap();
+        for (l, r) in lhs.iter_mut().zip(rhs.iter()) {
+            *l = *l - *r;
+        }
+        Ok(Self {
+            shape: self.shape,
+            bytes: Box::new(lhs),
+            data_type: crate::GGMLType::F32,
+        })
+    }
+}
 
 impl infa_impl::TensorOps<GGUFTensor, crate::Error> for GGUFTensor {
     fn shape(&self) -> &Vec<u64> {
