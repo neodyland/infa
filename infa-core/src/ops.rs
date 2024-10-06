@@ -4,17 +4,17 @@ pub enum Tensor {
 }
 
 impl std::ops::Add<Tensor> for Tensor {
-    type Output = Tensor;
+    type Output = crate::Result<Self>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
-            (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor(lhs + rhs),
-        }
+            (Tensor::GGUFTensor(lhs), Tensor::GGUFTensor(rhs)) => Tensor::GGUFTensor((lhs + rhs)?),
+        })
     }
 }
 
-impl infa_impl::TensorOps<Tensor> for Tensor {
+impl infa_impl::TensorOps<Tensor, crate::Error> for Tensor {
     fn shape(&self) -> &Vec<u64> {
         match self {
             #[cfg(feature = "gguf")]

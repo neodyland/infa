@@ -29,26 +29,28 @@ impl GGUFTensor {
 }
 
 impl std::ops::Add<GGUFTensor> for GGUFTensor {
-    type Output = Self;
+    type Output = crate::Result<Self>;
 
     fn add(self, rhs: GGUFTensor) -> Self::Output {
         if self.shape != rhs.shape {
-            panic!("Cannot add tensors with different shapes");
+            return Err(crate::Error::OpError(format!(
+                "Cannot add tensors with different shapes"
+            )));
         }
         let rhs = rhs.bytes.to_f32(rhs.f32_size()).unwrap();
         let mut lhs = self.bytes.to_f32(self.f32_size()).unwrap();
         for (l, r) in lhs.iter_mut().zip(rhs.iter()) {
             *l = *l + *r;
         }
-        Self {
+        Ok(Self {
             shape: self.shape,
             bytes: Box::new(lhs),
             data_type: crate::GGMLType::F32,
-        }
+        })
     }
 }
 
-impl infa_impl::TensorOps<GGUFTensor> for GGUFTensor {
+impl infa_impl::TensorOps<GGUFTensor, crate::Error> for GGUFTensor {
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }

@@ -18,5 +18,7 @@ pub enum Error {
     NoSuchTensor(String),
     #[error("Quantization error: {0}")]
     QuantizationError(String),
+    #[error("Op error: {0}")]
+    OpError(String),
 }
 pub(crate) type Result<T> = std::result::Result<T, Error>;
