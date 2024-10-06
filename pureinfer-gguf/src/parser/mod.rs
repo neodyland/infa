@@ -1,8 +1,10 @@
+mod quant_block_utils;
 mod quant_blocks;
 mod typing;
 
 use std::io::Read;
 
+pub(crate) use quant_block_utils::*;
 pub use quant_blocks::*;
 pub use typing::*;
 

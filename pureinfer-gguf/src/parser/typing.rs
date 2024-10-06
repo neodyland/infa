@@ -23,7 +23,7 @@ impl<'a> GGUFTensor<'a> {
     pub fn f32_size(&self) -> usize {
         self.shape.iter().product::<u64>() as usize
     }
-    pub fn from_raw_parts<T>(
+    pub(crate) fn from_raw_parts<T>(
         bytes: Vec<u8>,
         size: usize,
         shape: &'a Vec<u64>,
@@ -280,7 +280,7 @@ pub enum GGMLType {
 }
 
 impl GGMLType {
-    pub fn block_size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             Self::Q4_0 => std::mem::size_of::<crate::BlockQ4_0>(),
             Self::Q4_1 => std::mem::size_of::<crate::BlockQ4_1>(),
@@ -320,7 +320,7 @@ impl GGMLType {
             Self::TQ2_0 => std::mem::size_of::<crate::BlockTq2_0>(),
         }
     }
-    pub fn size(&self) -> usize {
+    pub fn block_size(&self) -> usize {
         match self {
             Self::F32 => 1,
             Self::F16 => 1,

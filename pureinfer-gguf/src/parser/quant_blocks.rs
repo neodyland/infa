@@ -296,26 +296,113 @@ impl GGUFBlock for BlockQ3K {
 
     const BLCK_SIZE: usize = QK_K;
 }
-
-pub const QK4_K: usize = 64;
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ4K {
     d: f16,                     // super-block scale for quantized scales
     dmin: f16,                  // super-block scale for quantized mins
     scales: [u8; K_SCALE_SIZE], // quantized scales and mins
-    qs: [u8; QK4_K / 2],        // 4-bit quants
+    qs: [u8; QK_K / 2],         // 4-bit quants
 }
 
 const _: () = assert!(
-    std::mem::size_of::<BlockQ4K>() == 2 * std::mem::size_of::<f16>() + K_SCALE_SIZE + QK4_K / 2,
+    std::mem::size_of::<BlockQ4K>() == 2 * std::mem::size_of::<f16>() + K_SCALE_SIZE + QK_K / 2,
     "wrong q4_K block size/padding"
 );
 
 impl GGUFBlock for BlockQ4K {
     const DTYPE: crate::GGMLType = crate::GGMLType::Q4_K;
 
-    const BLCK_SIZE: usize = QK4_K;
+    const BLCK_SIZE: usize = QK_K;
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        for (block, y) in crate::group_for_dequantization(s, f)? {
+            let d = block.d.to_f32();
+            let min = block.dmin.to_f32();
+            let q = &block.qs;
+            let mut is = 0;
+            let mut ys_index = 0;
+
+            for j in (0..QK_K).step_by(64) {
+                let q = &q[j / 2..j / 2 + 32];
+                let (sc, m) = crate::get_scale_min_k4(is, &block.scales);
+                let d1 = d * sc as f32;
+                let m1 = min * m as f32;
+                let (sc, m) = crate::get_scale_min_k4(is + 1, &block.scales);
+                let d2 = d * sc as f32;
+                let m2 = min * m as f32;
+                for q in q {
+                    y[ys_index] = d1 * (q & 0xF) as f32 - m1;
+                    ys_index += 1;
+                }
+                for q in q {
+                    y[ys_index] = d2 * (q >> 4) as f32 - m2;
+                    ys_index += 1;
+                }
+                is += 2;
+            }
+        }
+        Ok(())
+    }
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        for (block, x) in crate::group_for_quantization(f, s)? {
+            let mut mins: [f32; QK_K / 32] = [0.0; QK_K / 32];
+            let mut scales: [f32; QK_K / 32] = [0.0; QK_K / 32];
+
+            for (j, x_scale_slice) in x.chunks_exact(32).enumerate() {
+                (scales[j], mins[j]) = crate::make_qkx1_quants(15, 5, x_scale_slice);
+            }
+
+            // get max scale and max min and ensure they are >= 0.0
+            let max_scale = scales.iter().fold(0.0, |max, &val| val.max(max));
+            let max_min = mins.iter().fold(0.0, |max, &val| val.max(max));
+
+            let inv_scale = if max_scale > 0.0 {
+                63.0 / max_scale
+            } else {
+                0.0
+            };
+            let inv_min = if max_min > 0.0 { 63.0 / max_min } else { 0.0 };
+
+            for j in 0..QK_K / 32 {
+                let ls = crate::nearest_int(inv_scale * scales[j]).min(63) as u8;
+                let lm = crate::nearest_int(inv_min * mins[j]).min(63) as u8;
+                if j < 4 {
+                    block.scales[j] = ls;
+                    block.scales[j + 4] = lm;
+                } else {
+                    block.scales[j + 4] = (ls & 0xF) | ((lm & 0xF) << 4);
+                    block.scales[j - 4] |= (ls >> 4) << 6;
+                    block.scales[j] |= (lm >> 4) << 6;
+                }
+            }
+
+            block.d = f16::from_f32(max_scale / 63.0);
+            block.dmin = f16::from_f32(max_min / 63.0);
+
+            let mut l: [u8; QK_K] = [0; QK_K];
+
+            for j in 0..QK_K / 32 {
+                let (sc, m) = crate::get_scale_min_k4(j, &block.scales);
+                let d = block.d.to_f32() * sc as f32;
+                if d != 0.0 {
+                    let dm = block.dmin.to_f32() * m as f32;
+                    for ii in 0..32 {
+                        let l_val = crate::nearest_int((x[32 * j + ii] + dm) / d);
+                        l[32 * j + ii] = l_val.clamp(0, 15) as u8;
+                    }
+                }
+            }
+
+            let q = &mut block.qs;
+            for j in (0..QK_K).step_by(64) {
+                for l_val in 0..32 {
+                    let offset_index = (j / 64) * 32 + l_val;
+                    q[offset_index] = l[j + l_val] | (l[j + l_val + 32] << 4);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 pub const K_SCALE_SIZE: usize = 12;
@@ -341,18 +428,17 @@ impl GGUFBlock for BlockQ5K {
     const BLCK_SIZE: usize = QK_K;
 }
 
-pub const QK6_K: usize = 64;
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockQ6K {
-    ql: [u8; QK6_K / 2],      // quants, lower 4 bits
-    qh: [u8; QK6_K / 4],      // quants, upper 2 bits
-    scales: [i8; QK6_K / 16], // quantized scales
-    d: f16,                   // super-block scale
+    ql: [u8; QK_K / 2],      // quants, lower 4 bits
+    qh: [u8; QK_K / 4],      // quants, upper 2 bits
+    scales: [i8; QK_K / 16], // quantized scales
+    d: f16,                  // super-block scale
 }
 
 const _: () = assert!(
-    std::mem::size_of::<BlockQ6K>() == std::mem::size_of::<f16>() + QK6_K / 16 + 3 * QK6_K / 4,
+    std::mem::size_of::<BlockQ6K>() == std::mem::size_of::<f16>() + QK_K / 16 + 3 * QK_K / 4,
     "wrong q6_K block size/padding"
 );
 
@@ -360,6 +446,110 @@ impl GGUFBlock for BlockQ6K {
     const DTYPE: crate::GGMLType = crate::GGMLType::Q6_K;
 
     const BLCK_SIZE: usize = QK_K;
+    fn to_f32(s: &[Self], f: &mut [f32]) -> crate::Result<()> {
+        let k = f.len();
+        if k % QK_K != 0 {
+            return Err(crate::Error::QuantizationError(format!(
+                "dequantize_row_q6k: {k} is not divisible by {QK_K}"
+            )));
+        }
+        for (idx_x, x) in s.iter().enumerate() {
+            let d = x.d.to_f32();
+            let ql = &x.ql;
+            let qh = &x.qh;
+            let sc = &x.scales;
+            for n in (0..QK_K).step_by(128) {
+                let idx = n / 128;
+                let ys = &mut f[idx_x * QK_K + n..];
+                let sc = &sc[8 * idx..];
+                let ql = &ql[64 * idx..];
+                let qh = &qh[32 * idx..];
+                for l in 0..32 {
+                    let is = l / 16;
+                    let q1 = ((ql[l] & 0xF) | ((qh[l] & 3) << 4)) as i8 - 32;
+                    let q2 = ((ql[l + 32] & 0xF) | (((qh[l] >> 2) & 3) << 4)) as i8 - 32;
+                    let q3 = ((ql[l] >> 4) | (((qh[l] >> 4) & 3) << 4)) as i8 - 32;
+                    let q4 = ((ql[l + 32] >> 4) | (((qh[l] >> 6) & 3) << 4)) as i8 - 32;
+                    ys[l] = d * sc[is] as f32 * q1 as f32;
+                    ys[l + 32] = d * sc[is + 2] as f32 * q2 as f32;
+                    ys[l + 64] = d * sc[is + 4] as f32 * q3 as f32;
+                    ys[l + 96] = d * sc[is + 6] as f32 * q4 as f32;
+                }
+            }
+        }
+        Ok(())
+    }
+    fn from_f32(f: &[f32], s: &mut [Self]) -> crate::Result<()> {
+        if s.len() != f.len() * Self::BLCK_SIZE {
+            return Err(crate::Error::QuantizationError(format!(
+                "quantize_row_q6k: size mismatch {} {} {}",
+                s.len(),
+                f.len(),
+                Self::BLCK_SIZE
+            )));
+        }
+        let mut l = [0i8; QK_K];
+        let mut scales = [0f32; QK_K / 16];
+        let mut x = f.as_ptr();
+        let l = l.as_mut_ptr();
+        unsafe {
+            for y in s.iter_mut() {
+                let mut max_scale = 0f32;
+                let mut max_abs_scale = 0f32;
+                for (ib, scale_) in scales.iter_mut().enumerate() {
+                    let scale = crate::make_qx_quants(16, 32, x.add(16 * ib), l.add(16 * ib), 1);
+                    *scale_ = scale;
+                    let abs_scale = scale.abs();
+                    if abs_scale > max_abs_scale {
+                        max_abs_scale = abs_scale;
+                        max_scale = scale
+                    }
+                }
+
+                let iscale = -128f32 / max_scale;
+                y.d = f16::from_f32(1.0 / iscale);
+
+                for (y_scale, scale) in y.scales.iter_mut().zip(scales.iter()) {
+                    *y_scale = crate::nearest_int(iscale * scale).min(127) as i8
+                }
+
+                for (j, &y_scale) in y.scales.iter().enumerate() {
+                    let d = y.d.to_f32() * y_scale as f32;
+                    if d == 0. {
+                        continue;
+                    }
+                    for ii in 0..16 {
+                        let ll = crate::nearest_int(*x.add(16 * j + ii) / d).clamp(-32, 31);
+                        *l.add(16 * j + ii) = (ll + 32) as i8
+                    }
+                }
+
+                let mut ql = y.ql.as_mut_ptr();
+                let mut qh = y.qh.as_mut_ptr();
+
+                for j in (0..QK_K).step_by(128) {
+                    for l_idx in 0..32 {
+                        let q1 = *l.add(j + l_idx) & 0xF;
+                        let q2 = *l.add(j + l_idx + 32) & 0xF;
+                        let q3 = *l.add(j + l_idx + 64) & 0xF;
+                        let q4 = *l.add(j + l_idx + 96) & 0xF;
+                        *ql.add(l_idx) = (q1 | (q3 << 4)) as u8;
+                        *ql.add(l_idx + 32) = (q2 | (q4 << 4)) as u8;
+                        *qh.add(l_idx) = ((*l.add(j + l_idx) >> 4)
+                            | ((*l.add(j + l_idx + 32) >> 4) << 2)
+                            | ((*l.add(j + l_idx + 64) >> 4) << 4)
+                            | ((*l.add(j + l_idx + 96) >> 4) << 6))
+                            as u8;
+                    }
+                    ql = ql.add(64);
+                    qh = qh.add(32);
+                }
+
+                x = x.add(QK_K)
+            }
+        }
+        Ok(())
+    }
 }
 
 pub const QK8_K: usize = 64;
@@ -568,6 +758,7 @@ pub trait BaseGGUFBlock: Send + Sync {
     fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self>
     where
         Self: Sized;
+    fn len(&self) -> usize;
 }
 impl<T> BaseGGUFBlock for Vec<T>
 where
@@ -583,6 +774,9 @@ where
         T::from_f32(f, &mut s)?;
         Ok(s)
     }
+    fn len(&self) -> usize {
+        self.len()
+    }
 }
 
 impl<T> BaseGGUFBlock for &[T]
@@ -590,12 +784,17 @@ where
     T: GGUFBlock,
 {
     fn to_f32(&self, elem: usize) -> crate::Result<Vec<f32>> {
-        self.to_vec().to_f32(elem)
+        let mut f = vec![0.0; elem];
+        T::to_f32(self, &mut f)?;
+        Ok(f)
     }
     #[allow(unused_variables)]
     fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self> {
         Err(crate::Error::QuantizationError(
             "How are you calling this stupid function?".to_string(),
         ))
+    }
+    fn len(&self) -> usize {
+        self.to_vec().len()
     }
 }
