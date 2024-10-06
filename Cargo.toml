@@ -1,6 +1,6 @@
 [workspace]
 package.version = "0.1.0"
-members = ["infa-core", "infa-gguf", "infa-impl"]
+members = [ "infa","infa-core", "infa-gguf", "infa-impl", "infa-nn"]
 resolver = "2"
 
 [workspace.dependencies]

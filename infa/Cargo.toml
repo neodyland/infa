@@ -1,0 +1,8 @@
+[package]
+name = "infa"
+edition = "2021"
+version.workspace = true
+
+[dependencies]
+infa-nn = { path = "../infa-nn" }
+infa-core = { path = "../infa-core" }

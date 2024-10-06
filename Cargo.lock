@@ -25,6 +25,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "infa"
+version = "0.1.0"
+dependencies = [
+ "infa-core",
+ "infa-nn",
+]
+
+[[package]]
 name = "infa-core"
 version = "0.1.0"
 dependencies = [
@@ -44,6 +52,13 @@ dependencies = [
 [[package]]
 name = "infa-impl"
 version = "0.1.0"
+
+[[package]]
+name = "infa-nn"
+version = "0.1.0"
+dependencies = [
+ "infa-core",
+]
 
 [[package]]
 name = "proc-macro2"
