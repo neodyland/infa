@@ -64,7 +64,7 @@ where
             let start = tensor.offset;
             let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>() as usize
                 / tensor.data_type.block_size();
-            let mut bytes = vec![0; size as usize];
+            let mut bytes = vec![0; size];
             self.tensor_bytes
                 .seek(SeekFrom::Start(start + self.offset))?;
             self.tensor_bytes.read_exact(&mut bytes)?;

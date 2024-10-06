@@ -758,7 +758,6 @@ pub trait BaseGGUFBlock: Send + Sync {
     fn from_f32(f: &[f32], elem: usize) -> crate::Result<Self>
     where
         Self: Sized;
-    fn len(&self) -> usize;
 }
 impl<T> BaseGGUFBlock for Vec<T>
 where
@@ -773,9 +772,6 @@ where
         let mut s = vec![T::zeros(); elem];
         T::from_f32(f, &mut s)?;
         Ok(s)
-    }
-    fn len(&self) -> usize {
-        self.len()
     }
 }
 
@@ -793,8 +789,5 @@ where
         Err(crate::Error::QuantizationError(
             "How are you calling this stupid function?".to_string(),
         ))
-    }
-    fn len(&self) -> usize {
-        self.to_vec().len()
     }
 }
