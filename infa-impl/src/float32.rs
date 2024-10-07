@@ -26,6 +26,29 @@ impl crate::TensorOps<Float32Tensor> for Float32Tensor {
             data: vec![sum],
         })
     }
+
+    fn mul(self, rhs: Float32Tensor) -> crate::Result<Float32Tensor> {
+        if self.shape.len() != 2 || rhs.shape.len() != 2 {
+            return Err(crate::Error::InvalidShape(self.shape, rhs.shape));
+        }
+        if self.shape[1] != rhs.shape[0] {
+            return Err(crate::Error::ShapeMismatch(self.shape, rhs.shape));
+        }
+        let mut result_data = vec![0.0; (self.shape[0] * rhs.shape[1]) as usize];
+        for i in 0..self.shape[0] {
+            for j in 0..rhs.shape[1] {
+                for k in 0..self.shape[1] {
+                    result_data[(i * rhs.shape[1] + j) as usize] += self.data
+                        [(i * self.shape[1] + k) as usize]
+                        * rhs.data[(k * rhs.shape[1] + j) as usize];
+                }
+            }
+        }
+        Ok(Float32Tensor {
+            shape: vec![self.shape[0], rhs.shape[1]],
+            data: result_data,
+        })
+    }
 }
 
 impl crate::BaseTensorOps for Float32Tensor {

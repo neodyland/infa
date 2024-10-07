@@ -21,6 +21,8 @@ pub enum Error {
     DequantizeError(String),
     #[error("Shape mismatch: {0:?} {1:?}")]
     ShapeMismatch(Vec<u64>, Vec<u64>),
+    #[error("Invalid shape: {0:?} {1:?}")]
+    InvalidShape(Vec<u64>, Vec<u64>),
     #[error("Other error: {0}")]
     OtherError(String),
 }
@@ -29,6 +31,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait TensorOps<T> {
     fn add(self, rhs: T) -> Result<T>;
+    fn mul(self, rhs: T) -> Result<T>;
     fn sum(self) -> Result<T>;
 }
 
@@ -50,6 +53,10 @@ where
 {
     fn add(self, rhs: T) -> Result<T> {
         self.dequantize()?.add(rhs)
+    }
+
+    fn mul(self, rhs: T) -> Result<T> {
+        self.dequantize()?.mul(rhs)
     }
 
     fn sum(self) -> Result<T> {

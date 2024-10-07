@@ -34,6 +34,26 @@ impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
             FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.sum()?),
         })
     }
+
+    fn mul(self, rhs: FloatTensor) -> infa_impl::Result<FloatTensor> {
+        Ok(match (self, rhs) {
+            #[cfg(feature = "gguf")]
+            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::Float32Tensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.mul(t2)?)
+            }
+            #[cfg(feature = "gguf")]
+            (FloatTensor::Float32Tensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
+                FloatTensor::Float32Tensor(t2.mul(t1)?)
+            }
+            #[cfg(feature = "gguf")]
+            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.mul(t2.dequantize()?)?)
+            }
+            (FloatTensor::Float32Tensor(t1), FloatTensor::Float32Tensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.mul(t2)?)
+            }
+        })
+    }
 }
 
 impl infa_impl::BaseTensorOps for FloatTensor {
@@ -44,6 +64,14 @@ impl infa_impl::BaseTensorOps for FloatTensor {
             FloatTensor::Float32Tensor(t) => t.shape(),
         }
     }
+
+    fn reshape(&self, shape: Vec<u64>) -> infa_impl::Result<Self> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t) => FloatTensor::GGUFFloatTensor(t.reshape(shape)?),
+            FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.reshape(shape)?),
+        })
+    }
 }
 
 impl std::ops::Add for FloatTensor {
@@ -51,5 +79,13 @@ impl std::ops::Add for FloatTensor {
 
     fn add(self, rhs: Self) -> Self::Output {
         TensorOps::add(self, rhs)
+    }
+}
+
+impl std::ops::Mul for FloatTensor {
+    type Output = infa_impl::Result<Self>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        TensorOps::mul(self, rhs)
     }
 }
