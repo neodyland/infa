@@ -32,4 +32,10 @@ impl crate::BaseTensorOps for Float32Tensor {
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }
+    fn reshape(&self, shape: Vec<u64>) -> crate::Result<Self> {
+        Ok(Self {
+            shape,
+            data: self.data.clone(),
+        })
+    }
 }

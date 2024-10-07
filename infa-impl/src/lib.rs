@@ -21,6 +21,8 @@ pub enum Error {
     DequantizeError(String),
     #[error("Shape mismatch: {0:?} {1:?}")]
     ShapeMismatch(Vec<u64>, Vec<u64>),
+    #[error("Other error: {0}")]
+    OtherError(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -32,6 +34,9 @@ pub trait TensorOps<T> {
 
 pub trait BaseTensorOps {
     fn shape(&self) -> &Vec<u64>;
+    fn reshape(&self, shape: Vec<u64>) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 pub trait Dequantize<T> {

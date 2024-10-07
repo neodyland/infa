@@ -97,6 +97,18 @@ impl infa_impl::BaseTensorOps for GGUFFloatTensor {
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }
+    fn reshape(&self, shape: Vec<u64>) -> infa_impl::Result<Self> {
+        let size = self.data_type.size() * self.shape.iter().product::<u64>() as usize
+            / self.data_type.block_size();
+        Ok(Self::from_data(
+            &self.data_type,
+            shape,
+            size,
+            self.data()
+                .map_err(|e| infa_impl::Error::OtherError(e.to_string()))?
+                .to_vec(),
+        ))
+    }
 }
 
 impl infa_impl::Dequantize<infa_impl::Float32Tensor> for GGUFFloatTensor {
