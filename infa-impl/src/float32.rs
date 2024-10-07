@@ -5,21 +5,26 @@ pub struct Float32Tensor {
 }
 
 impl crate::TensorOps<Float32Tensor> for Float32Tensor {
-    fn add(self, rhs: Float32Tensor) -> Result<Float32Tensor, crate::Error> {
+    type Item = f32;
+
+    fn add(&self, rhs: &Float32Tensor) -> Result<Float32Tensor, crate::Error> {
         if self.shape != rhs.shape {
-            return Err(crate::Error::ShapeMismatch(self.shape, rhs.shape));
+            return Err(crate::Error::ShapeMismatch(
+                self.shape.clone(),
+                rhs.shape.clone(),
+            ));
         }
         let mut result_data = Vec::with_capacity(self.data.len());
         for (a, b) in self.data.iter().zip(rhs.data.iter()) {
             result_data.push(a + b);
         }
         Ok(Float32Tensor {
-            shape: self.shape,
+            shape: self.shape.clone(),
             data: result_data,
         })
     }
 
-    fn sum(self) -> crate::Result<Float32Tensor> {
+    fn sum(&self) -> crate::Result<Float32Tensor> {
         let sum = self.data.iter().sum();
         Ok(Float32Tensor {
             shape: vec![1],
@@ -27,12 +32,18 @@ impl crate::TensorOps<Float32Tensor> for Float32Tensor {
         })
     }
 
-    fn mul(self, rhs: Float32Tensor) -> crate::Result<Float32Tensor> {
+    fn mul(&self, rhs: &Float32Tensor) -> crate::Result<Float32Tensor> {
         if self.shape.len() != 2 || rhs.shape.len() != 2 {
-            return Err(crate::Error::InvalidShape(self.shape, rhs.shape));
+            return Err(crate::Error::InvalidShape(
+                self.shape.clone(),
+                rhs.shape.clone(),
+            ));
         }
         if self.shape[1] != rhs.shape[0] {
-            return Err(crate::Error::ShapeMismatch(self.shape, rhs.shape));
+            return Err(crate::Error::ShapeMismatch(
+                self.shape.clone(),
+                rhs.shape.clone(),
+            ));
         }
         let mut result_data = vec![0.0; (self.shape[0] * rhs.shape[1]) as usize];
         for i in 0..self.shape[0] {
@@ -48,6 +59,9 @@ impl crate::TensorOps<Float32Tensor> for Float32Tensor {
             shape: vec![self.shape[0], rhs.shape[1]],
             data: result_data,
         })
+    }
+    fn item(&self) -> crate::Result<Vec<Self::Item>> {
+        Ok(self.data.clone())
     }
 }
 
