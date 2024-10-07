@@ -1,1 +1,2 @@
-pub trait Module {}
+mod linear;
+pub use linear::*;
