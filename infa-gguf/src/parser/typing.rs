@@ -27,7 +27,7 @@ impl<R> GGUF<R>
 where
     R: Read + Seek,
 {
-    pub fn get_tensor(&mut self, name: &str) -> crate::Result<crate::GGUFTensor> {
+    pub fn get_tensor(&mut self, name: &str) -> crate::Result<crate::GGUFFloatTensor> {
         if let Some(tensor) = self.tensors.iter().find(|t| t.name == name) {
             let start = tensor.offset;
             let size = tensor.data_type.size() * tensor.shape.iter().product::<u64>() as usize
@@ -36,7 +36,7 @@ where
             self.tensor_bytes
                 .seek(SeekFrom::Start(start + self.offset))?;
             self.tensor_bytes.read_exact(&mut bytes)?;
-            Ok(crate::GGUFTensor::from_data(
+            Ok(crate::GGUFFloatTensor::from_data(
                 &tensor.data_type,
                 tensor.shape.clone(),
                 size,

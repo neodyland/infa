@@ -2,13 +2,13 @@ use std::borrow::Cow;
 
 use half::{bf16, f16};
 
-pub struct GGUFTensor {
+pub struct GGUFFloatTensor {
     pub shape: Vec<u64>,
     pub bytes: Box<dyn crate::BaseGGUFBlock>,
     pub data_type: crate::GGMLType,
 }
 
-impl GGUFTensor {
+impl GGUFFloatTensor {
     pub fn f32_size(&self) -> usize {
         self.shape.iter().product::<u64>() as usize
     }
@@ -43,117 +43,71 @@ impl GGUFTensor {
         bytes: Vec<u8>,
     ) -> Self {
         match data_type {
-            crate::GGMLType::Q4_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_0>(
+            crate::GGMLType::Q4_0 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ4_0>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q4_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4_1>(
+            crate::GGMLType::Q4_1 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ4_1>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q5_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_0>(
+            crate::GGMLType::Q5_0 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ5_0>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q5_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5_1>(
+            crate::GGMLType::Q5_1 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ5_1>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q8_0 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_0>(
+            crate::GGMLType::Q8_0 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ8_0>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q8_1 => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8_1>(
+            crate::GGMLType::Q8_1 => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ8_1>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q2_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ2K>(
+            crate::GGMLType::Q2_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ2K>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q3_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ3K>(
+            crate::GGMLType::Q3_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ3K>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q4_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ4K>(
+            crate::GGMLType::Q4_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ4K>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q5_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ5K>(
+            crate::GGMLType::Q5_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ5K>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q6_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ6K>(
+            crate::GGMLType::Q6_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ6K>(
                 bytes, size, &shape, &data_type,
             ),
-            crate::GGMLType::Q8_K => crate::GGUFTensor::from_raw_parts::<crate::BlockQ8K>(
+            crate::GGMLType::Q8_K => crate::GGUFFloatTensor::from_raw_parts::<crate::BlockQ8K>(
                 bytes, size, &shape, &data_type,
             ),
             crate::GGMLType::BF16 => {
-                crate::GGUFTensor::from_raw_parts::<bf16>(bytes, size, &shape, &data_type)
+                crate::GGUFFloatTensor::from_raw_parts::<bf16>(bytes, size, &shape, &data_type)
             }
             crate::GGMLType::F16 => {
-                crate::GGUFTensor::from_raw_parts::<f16>(bytes, size, &shape, &data_type)
+                crate::GGUFFloatTensor::from_raw_parts::<f16>(bytes, size, &shape, &data_type)
             }
             crate::GGMLType::F32 => {
-                crate::GGUFTensor::from_raw_parts::<f32>(bytes, size, &shape, &data_type)
+                crate::GGUFFloatTensor::from_raw_parts::<f32>(bytes, size, &shape, &data_type)
             }
             _ => unimplemented!(),
         }
     }
 }
 
-impl std::ops::Add<&GGUFTensor> for &GGUFTensor {
-    type Output = crate::Result<GGUFTensor>;
-
-    fn add(self, rhs: &GGUFTensor) -> Self::Output {
-        if self.shape != rhs.shape {
-            return Err(crate::Error::OpError(format!(
-                "Cannot add tensors with different shapes"
-            )));
-        }
-        let rhs = rhs.bytes.to_f32(rhs.f32_size()).unwrap();
-        let mut lhs = self.bytes.to_f32(self.f32_size()).unwrap();
-        for (l, r) in lhs.iter_mut().zip(rhs.iter()) {
-            *l = *l + *r;
-        }
-        Ok(GGUFTensor {
-            shape: self.shape.clone(),
-            bytes: Box::new(lhs),
-            data_type: crate::GGMLType::F32,
-        })
-    }
-}
-impl std::ops::Sub<&GGUFTensor> for &GGUFTensor {
-    type Output = crate::Result<GGUFTensor>;
-
-    fn sub(self, rhs: &GGUFTensor) -> Self::Output {
-        if self.shape != rhs.shape {
-            return Err(crate::Error::OpError(format!(
-                "Cannot add tensors with different shapes"
-            )));
-        }
-        let rhs = rhs.bytes.to_f32(rhs.f32_size()).unwrap();
-        let mut lhs = self.bytes.to_f32(self.f32_size()).unwrap();
-        for (l, r) in lhs.iter_mut().zip(rhs.iter()) {
-            *l = *l - *r;
-        }
-        Ok(GGUFTensor {
-            shape: self.shape.clone(),
-            bytes: Box::new(lhs),
-            data_type: crate::GGMLType::F32,
-        })
+impl infa_impl::BaseTensorOps for GGUFFloatTensor {
+    fn shape(&self) -> &Vec<u64> {
+        &self.shape
     }
 }
 
-impl infa_impl::TensorOps<'_, GGUFTensor, crate::Error> for &GGUFTensor {
-    fn shape(&self) -> Vec<u64> {
-        self.shape.clone()
-    }
-    fn reshape(&self, shape: Vec<u64>) -> Result<GGUFTensor, crate::Error> {
-        let b = shape.iter().product::<u64>();
-        let a = self.shape.iter().product::<u64>();
-        if b != a {
-            return Err(crate::Error::OpError(format!(
-                "Cannot reshape tensor to different size: {} and {}",
-                b, a
-            )));
-        }
-        Ok(GGUFTensor::from_data(
-            &self.data_type,
-            shape,
-            self.bytes.bytes_size(),
-            self.data()?.to_vec(),
-        ))
+impl infa_impl::Dequantize<infa_impl::Float32Tensor> for GGUFFloatTensor {
+    fn dequantize(self) -> infa_impl::Result<infa_impl::Float32Tensor> {
+        let v = self
+            .bytes
+            .to_f32(self.shape.iter().product::<u64>() as usize)
+            .map_err(|e| infa_impl::Error::DequantizeError(e.to_string()))?;
+        Ok(infa_impl::Float32Tensor {
+            shape: self.shape.clone(),
+            data: v,
+        })
     }
 }

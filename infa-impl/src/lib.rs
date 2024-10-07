@@ -15,11 +15,39 @@ pub use float64::*;
 mod bfloat16;
 pub use bfloat16::*;
 
-use std::ops::{Add, Sub};
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Dequantize error: {0}")]
+    DequantizeError(String),
+    #[error("Shape mismatch: {0:?} {1:?}")]
+    ShapeMismatch(Vec<u64>, Vec<u64>),
+}
 
-pub trait TensorOps<'a, T: 'a, E>:
-    Add<&'a T, Output = Result<T, E>> + Sub<&'a T, Output = Result<T, E>> + Sized
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub trait TensorOps<T> {
+    fn add(self, rhs: T) -> Result<T>;
+    fn sum(self) -> Result<T>;
+}
+
+pub trait BaseTensorOps {
+    fn shape(&self) -> &Vec<u64>;
+}
+
+pub trait Dequantize<T> {
+    fn dequantize(self) -> Result<T>;
+}
+
+impl<'a, T, U> TensorOps<T> for U
+where
+    T: TensorOps<T>,
+    U: Dequantize<T>,
 {
-    fn shape(&self) -> Vec<u64>;
-    fn reshape(&self, shape: Vec<u64>) -> Result<T, E>;
+    fn add(self, rhs: T) -> Result<T> {
+        self.dequantize()?.add(rhs)
+    }
+
+    fn sum(self) -> Result<T> {
+        self.dequantize()?.sum()
+    }
 }
