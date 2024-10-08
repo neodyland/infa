@@ -8,6 +8,13 @@ pub enum FloatTensor {
 }
 
 impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
+    fn add_item(&self, rhs: &Self::Item) -> infa_impl::Result<FloatTensor> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t1) => FloatTensor::Float32Tensor(t1.add_item(rhs)?),
+            FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.add_item(rhs)?),
+        })
+    }
     fn add(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
         Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
@@ -64,6 +71,13 @@ impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
             FloatTensor::Float32Tensor(t) => t.item()?,
         })
     }
+    fn size(&self) -> infa_impl::Result<usize> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t) => t.size()?,
+            FloatTensor::Float32Tensor(t) => t.size()?,
+        })
+    }
 }
 
 impl infa_impl::BaseTensorOps for FloatTensor {
@@ -89,6 +103,13 @@ impl<'a> std::ops::Add<&'a FloatTensor> for &'a FloatTensor {
 
     fn add(self, rhs: Self) -> Self::Output {
         TensorOps::add(self, rhs)
+    }
+}
+impl<'a> std::ops::Add<&'a f32> for &'a FloatTensor {
+    type Output = infa_impl::Result<FloatTensor>;
+
+    fn add(self, rhs: &f32) -> Self::Output {
+        TensorOps::add_item(self, rhs)
     }
 }
 

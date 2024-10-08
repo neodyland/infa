@@ -6,6 +6,16 @@ pub struct Float32Tensor {
 
 impl crate::TensorOps<Float32Tensor> for Float32Tensor {
     type Item = f32;
+    fn add_item(&self, rhs: &Self::Item) -> crate::Result<Float32Tensor> {
+        let mut result_data = Vec::with_capacity(self.data.len());
+        for item in self.data.iter() {
+            result_data.push(item + rhs);
+        }
+        Ok(Float32Tensor {
+            shape: self.shape.clone(),
+            data: result_data,
+        })
+    }
 
     fn add(&self, rhs: &Float32Tensor) -> Result<Float32Tensor, crate::Error> {
         if self.shape != rhs.shape {
@@ -62,6 +72,9 @@ impl crate::TensorOps<Float32Tensor> for Float32Tensor {
     }
     fn item(&self) -> crate::Result<Vec<Self::Item>> {
         Ok(self.data.clone())
+    }
+    fn size(&self) -> crate::Result<usize> {
+        Ok(self.data.len())
     }
 }
 

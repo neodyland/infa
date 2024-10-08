@@ -29,12 +29,14 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub trait TensorOps<T> {
+pub trait TensorOps<T>: BaseTensorOps {
     type Item;
     fn item(&self) -> Result<Vec<Self::Item>>;
     fn add(&self, rhs: &T) -> Result<T>;
+    fn add_item(&self, rhs: &Self::Item) -> Result<T>;
     fn mul(&self, rhs: &T) -> Result<T>;
     fn sum(&self) -> Result<T>;
+    fn size(&self) -> Result<usize>;
 }
 
 pub trait BaseTensorOps {
@@ -51,7 +53,7 @@ pub trait Dequantize<T> {
 impl<T, U> TensorOps<T> for U
 where
     T: TensorOps<T>,
-    U: Dequantize<T>,
+    U: Dequantize<T> + BaseTensorOps,
 {
     type Item = T::Item;
     fn item(&self) -> Result<Vec<Self::Item>> {
@@ -60,6 +62,9 @@ where
     fn add(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.add(rhs)
     }
+    fn add_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.dequantize()?.add_item(rhs)
+    }
 
     fn mul(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.mul(rhs)
@@ -67,5 +72,8 @@ where
 
     fn sum(&self) -> Result<T> {
         self.dequantize()?.sum()
+    }
+    fn size(&self) -> Result<usize> {
+        self.dequantize()?.size()
     }
 }
