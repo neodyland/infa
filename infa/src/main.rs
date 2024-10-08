@@ -1,7 +1,6 @@
 use infa::core::FloatTensor;
-use infa::gguf::GGUFParser;
 use infa::nn::module::Linear;
-use infa::r#impl::{BaseTensorOps, Float32Tensor, TensorOps};
+use infa::r#impl::{BaseTensorOps, TensorOps};
 
 struct Model {
     linear: Linear,
@@ -9,12 +8,10 @@ struct Model {
 
 impl Model {
     fn new() -> infa::Result<Self> {
+        let mut rng = infa::rand::thread_rng();
         let linear = Linear {
-            weights: FloatTensor::Float32Tensor(Float32Tensor::new(vec![1, 2048], 1.0)?),
-            biases: Some(FloatTensor::Float32Tensor(Float32Tensor::new(
-                vec![2048, 2048],
-                1.0,
-            )?)),
+            weights: FloatTensor::rand(vec![1, 2], &mut rng)?,
+            biases: Some(FloatTensor::rand(vec![2, 2], &mut rng)?),
         };
         Ok(Self { linear })
     }
@@ -24,11 +21,8 @@ impl Model {
 }
 
 fn main() {
-    let file = std::io::BufReader::new(std::fs::File::open("./example.gguf").unwrap());
-    let mut gguf = GGUFParser::new(file).parse().unwrap();
-    let x = FloatTensor::GGUFFloatTensor(gguf.get_tensor("output_norm.weight").unwrap());
+    let x = FloatTensor::of(vec![2, 1], 2.0).unwrap();
     let model = Model::new().unwrap();
-    let x = x.reshape(vec![2048, 1]).unwrap();
     let y = model.forward(x).unwrap();
-    println!("{:?} {:?}", y.shape(), &y.item().unwrap()[..10]);
+    println!("{:?} {:?}", y.shape(), &y.item().unwrap());
 }

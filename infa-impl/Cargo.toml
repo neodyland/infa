@@ -5,3 +5,4 @@ version.workspace = true
 
 [dependencies]
 thiserror.workspace = true
+rand.workspace = true

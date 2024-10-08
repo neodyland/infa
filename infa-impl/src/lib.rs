@@ -38,15 +38,66 @@ pub trait TensorOps<T, I>: BaseTensorOps<Item = I> {
     fn size(&self) -> Result<usize>;
 }
 
-pub trait BaseTensorOps {
+pub trait NumberDefaults {
+    fn zero() -> Self;
+    fn one() -> Self;
+    fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self>
+    where
+        Self: Sized;
+}
+
+impl NumberDefaults for f32 {
+    fn zero() -> Self {
+        0.0
+    }
+    fn one() -> Self {
+        1.0
+    }
+    fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self> {
+        (0..len).map(|_| rng.gen()).collect()
+    }
+}
+
+pub trait BaseTensorOps
+where
+    Self::Item: NumberDefaults + Clone,
+{
     type Item;
     fn shape(&self) -> &Vec<u64>;
     fn reshape(&self, shape: Vec<u64>) -> Result<Self>
     where
         Self: Sized;
-    fn new(shape: Vec<u64>, value: Self::Item) -> Result<Self>
+    fn from_values(shape: Vec<u64>, values: Vec<Self::Item>) -> Result<Self>
     where
         Self: Sized;
+    fn zeros(shape: Vec<u64>) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let values = vec![Self::Item::zero(); shape.iter().product::<u64>() as usize];
+        Self::from_values(shape, values)
+    }
+    fn ones(shape: Vec<u64>) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let values = vec![Self::Item::one(); shape.iter().product::<u64>() as usize];
+        Self::from_values(shape, values)
+    }
+    fn of(shape: Vec<u64>, v: Self::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let values = vec![v; shape.iter().product::<u64>() as usize];
+        Self::from_values(shape, values)
+    }
+    fn rand(shape: Vec<u64>, rng: &mut impl rand::Rng) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let size = shape.iter().product::<u64>() as usize;
+        Self::from_values(shape, Self::Item::rand(size, rng))
+    }
 }
 
 pub trait Dequantize<T> {

@@ -6,3 +6,4 @@ resolver = "2"
 [workspace.dependencies]
 half = "2.4.1"
 thiserror = "1.0.64"
+rand = "0.8.5"

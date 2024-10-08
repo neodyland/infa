@@ -9,6 +9,7 @@ infa-core = { path = "../infa-core", default-features = false }
 infa-gguf = { path = "../infa-gguf", optional = true }
 infa-impl = { path = "../infa-impl" }
 thiserror.workspace = true
+rand.workspace = true
 
 [features]
 default = ["gguf"]

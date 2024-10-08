@@ -78,6 +78,7 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
 }
 
 impl crate::BaseTensorOps for Float32Tensor {
+    type Item = f32;
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }
@@ -87,13 +88,17 @@ impl crate::BaseTensorOps for Float32Tensor {
             data: self.data.clone(),
         })
     }
-    type Item = f32;
-
-    fn new(shape: Vec<u64>, value: Self::Item) -> crate::Result<Self> {
+    fn from_values(shape: Vec<u64>, values: Vec<Self::Item>) -> crate::Result<Self> {
         let size: u64 = shape.iter().product();
+        if size != values.len() as u64 {
+            return Err(crate::Error::InvalidShape(
+                shape.clone(),
+                vec![values.len() as u64],
+            ));
+        }
         Ok(Self {
             shape,
-            data: vec![value; size as usize],
+            data: values,
         })
     }
 }

@@ -96,8 +96,8 @@ impl infa_impl::BaseTensorOps for FloatTensor {
             FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.reshape(shape)?),
         })
     }
-    fn new(shape: Vec<u64>, value: Self::Item) -> infa_impl::Result<Self> {
-        Float32Tensor::new(shape, value).map(FloatTensor::Float32Tensor)
+    fn from_values(shape: Vec<u64>, values: Vec<Self::Item>) -> infa_impl::Result<Self> {
+        Float32Tensor::from_values(shape, values).map(FloatTensor::Float32Tensor)
     }
 }
 

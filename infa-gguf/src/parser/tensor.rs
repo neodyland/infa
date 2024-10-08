@@ -111,11 +111,17 @@ impl infa_impl::BaseTensorOps for GGUFFloatTensor {
         ))
     }
     type Item = f32;
-    fn new(shape: Vec<u64>, value: Self::Item) -> infa_impl::Result<Self> {
+    fn from_values(shape: Vec<u64>, values: Vec<Self::Item>) -> infa_impl::Result<Self> {
         let size = Self::DEFAULT_DATA_TYPE.size() * shape.iter().product::<u64>() as usize;
+        if size != values.len() {
+            return Err(infa_impl::Error::ShapeMismatch(
+                shape,
+                vec![values.len() as u64],
+            ));
+        }
         Ok(Self {
             shape,
-            bytes: Box::new(vec![value; size]),
+            bytes: Box::new(values),
             data_type: Self::DEFAULT_DATA_TYPE,
         })
     }
