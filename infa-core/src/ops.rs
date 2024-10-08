@@ -1,4 +1,5 @@
 use infa_impl::Dequantize;
+use infa_impl::Float32Tensor;
 use infa_impl::TensorOps;
 
 pub enum FloatTensor {
@@ -7,7 +8,7 @@ pub enum FloatTensor {
     Float32Tensor(infa_impl::Float32Tensor),
 }
 
-impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
+impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
     fn add_item(&self, rhs: &Self::Item) -> infa_impl::Result<FloatTensor> {
         Ok(match self {
             #[cfg(feature = "gguf")]
@@ -62,8 +63,6 @@ impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
         })
     }
 
-    type Item = f32;
-
     fn item(&self) -> infa_impl::Result<Vec<Self::Item>> {
         Ok(match self {
             #[cfg(feature = "gguf")]
@@ -81,6 +80,7 @@ impl infa_impl::TensorOps<FloatTensor> for FloatTensor {
 }
 
 impl infa_impl::BaseTensorOps for FloatTensor {
+    type Item = f32;
     fn shape(&self) -> &Vec<u64> {
         match self {
             #[cfg(feature = "gguf")]
@@ -95,6 +95,9 @@ impl infa_impl::BaseTensorOps for FloatTensor {
             FloatTensor::GGUFFloatTensor(t) => FloatTensor::GGUFFloatTensor(t.reshape(shape)?),
             FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.reshape(shape)?),
         })
+    }
+    fn new(shape: Vec<u64>, value: Self::Item) -> infa_impl::Result<Self> {
+        Float32Tensor::new(shape, value).map(FloatTensor::Float32Tensor)
     }
 }
 

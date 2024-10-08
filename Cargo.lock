@@ -32,6 +32,7 @@ dependencies = [
  "infa-gguf",
  "infa-impl",
  "infa-nn",
+ "thiserror",
 ]
 
 [[package]]

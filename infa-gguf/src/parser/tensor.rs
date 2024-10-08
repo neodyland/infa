@@ -9,6 +9,7 @@ pub struct GGUFFloatTensor {
 }
 
 impl GGUFFloatTensor {
+    const DEFAULT_DATA_TYPE: crate::GGMLType = crate::GGMLType::F32;
     pub fn f32_size(&self) -> usize {
         self.shape.iter().product::<u64>() as usize
     }
@@ -108,6 +109,15 @@ impl infa_impl::BaseTensorOps for GGUFFloatTensor {
                 .map_err(|e| infa_impl::Error::OtherError(e.to_string()))?
                 .to_vec(),
         ))
+    }
+    type Item = f32;
+    fn new(shape: Vec<u64>, value: Self::Item) -> infa_impl::Result<Self> {
+        let size = Self::DEFAULT_DATA_TYPE.size() * shape.iter().product::<u64>() as usize;
+        Ok(Self {
+            shape,
+            bytes: Box::new(vec![value; size]),
+            data_type: Self::DEFAULT_DATA_TYPE,
+        })
     }
 }
 

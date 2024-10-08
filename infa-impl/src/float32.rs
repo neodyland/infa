@@ -4,8 +4,7 @@ pub struct Float32Tensor {
     pub data: Vec<f32>,
 }
 
-impl crate::TensorOps<Float32Tensor> for Float32Tensor {
-    type Item = f32;
+impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
     fn add_item(&self, rhs: &Self::Item) -> crate::Result<Float32Tensor> {
         let mut result_data = Vec::with_capacity(self.data.len());
         for item in self.data.iter() {
@@ -86,6 +85,15 @@ impl crate::BaseTensorOps for Float32Tensor {
         Ok(Self {
             shape,
             data: self.data.clone(),
+        })
+    }
+    type Item = f32;
+
+    fn new(shape: Vec<u64>, value: Self::Item) -> crate::Result<Self> {
+        let size: u64 = shape.iter().product();
+        Ok(Self {
+            shape,
+            data: vec![value; size as usize],
         })
     }
 }
