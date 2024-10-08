@@ -5,4 +5,10 @@ version.workspace = true
 
 [dependencies]
 infa-nn = { path = "../infa-nn" }
-infa-core = { path = "../infa-core" }
+infa-core = { path = "../infa-core", default-features = false }
+infa-gguf = { path = "../infa-gguf", optional = true }
+infa-impl = { path = "../infa-impl" }
+
+[features]
+default = ["gguf"]
+gguf = ["dep:infa-gguf", "infa-core/gguf"]

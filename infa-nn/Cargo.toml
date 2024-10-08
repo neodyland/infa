@@ -4,4 +4,4 @@ edition = "2021"
 version.workspace = true
 
 [dependencies]
-infa-core = { path = "../infa-core" }
+infa-core = { path = "../infa-core", default-features = false }

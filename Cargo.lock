@@ -29,6 +29,8 @@ name = "infa"
 version = "0.1.0"
 dependencies = [
  "infa-core",
+ "infa-gguf",
+ "infa-impl",
  "infa-nn",
 ]
 
