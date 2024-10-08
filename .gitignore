@@ -1,3 +1,4 @@
 *.gguf
 target/
 .aider*
+*.safetensors
