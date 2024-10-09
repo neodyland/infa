@@ -84,6 +84,7 @@ name = "infa-nn"
 version = "0.1.0"
 dependencies = [
  "infa-core",
+ "infa-impl",
 ]
 
 [[package]]

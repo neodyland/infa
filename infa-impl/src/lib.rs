@@ -29,24 +29,49 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+const SQRT_TWO_OVER_PI_F32: f32 = 0.79788456080286535587989211986876373;
+
 pub trait TensorOps<T, I>: BaseTensorOps<Item = I> {
     fn item(&self) -> Result<Vec<I>>;
     fn add(&self, rhs: &T) -> Result<T>;
     fn add_item(&self, rhs: &Self::Item) -> Result<T>;
     fn mul(&self, rhs: &T) -> Result<T>;
+    fn mul_item(&self, rhs: &Self::Item) -> Result<T>;
     fn sum(&self) -> Result<T>;
     fn size(&self) -> Result<usize>;
+    fn dim(&self, dim: i64) -> Result<u64> {
+        let shape = self.shape();
+        let index = if dim < 0 {
+            let index = shape.len() as i64 + dim;
+            if index < 0 {
+                return Err(Error::InvalidShape(shape.clone(), vec![index as u64]));
+            }
+            index as usize
+        } else {
+            dim as usize
+        };
+        if index >= shape.len() {
+            return Err(Error::InvalidShape(shape.clone(), vec![index as u64]));
+        }
+        Ok(shape[index])
+    }
+    fn sqrt(&self) -> Result<T>;
+    fn tanh(&self) -> Result<T>;
 }
 
 pub trait NumberDefaults {
     fn zero() -> Self;
     fn one() -> Self;
+    fn half() -> Self;
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self>
     where
         Self: Sized;
 }
 
 impl NumberDefaults for f32 {
+    fn half() -> Self {
+        0.5
+    }
     fn zero() -> Self {
         0.0
     }
@@ -128,5 +153,14 @@ where
     }
     fn size(&self) -> Result<usize> {
         self.dequantize()?.size()
+    }
+    fn sqrt(&self) -> Result<T> {
+        self.dequantize()?.sqrt()
+    }
+    fn tanh(&self) -> Result<T> {
+        self.dequantize()?.tanh()
+    }
+    fn mul_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.dequantize()?.mul_item(rhs)
     }
 }

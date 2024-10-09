@@ -5,3 +5,4 @@ version.workspace = true
 
 [dependencies]
 infa-core = { path = "../infa-core", default-features = false }
+infa-impl = { path = "../infa-impl" }

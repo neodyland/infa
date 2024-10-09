@@ -77,6 +77,28 @@ impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
             FloatTensor::Float32Tensor(t) => t.size()?,
         })
     }
+    fn sqrt(&self) -> infa_impl::Result<FloatTensor> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t) => FloatTensor::Float32Tensor(t.sqrt()?),
+            FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.sqrt()?),
+        })
+    }
+    fn tanh(&self) -> infa_impl::Result<FloatTensor> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t) => FloatTensor::Float32Tensor(t.tanh()?),
+            FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.tanh()?),
+        })
+    }
+
+    fn mul_item(&self, rhs: &Self::Item) -> infa_impl::Result<FloatTensor> {
+        Ok(match self {
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(t1) => FloatTensor::Float32Tensor(t1.mul_item(rhs)?),
+            FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.mul_item(rhs)?),
+        })
+    }
 }
 
 impl infa_impl::BaseTensorOps for FloatTensor {
@@ -121,5 +143,13 @@ impl<'a> std::ops::Mul<&'a FloatTensor> for &'a FloatTensor {
 
     fn mul(self, rhs: Self) -> Self::Output {
         TensorOps::mul(self, rhs)
+    }
+}
+
+impl<'a> std::ops::Mul<&'a f32> for &'a FloatTensor {
+    type Output = infa_impl::Result<FloatTensor>;
+
+    fn mul(self, rhs: &f32) -> Self::Output {
+        TensorOps::mul_item(self, rhs)
     }
 }

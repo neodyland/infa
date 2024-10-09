@@ -75,6 +75,37 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
     fn size(&self) -> crate::Result<usize> {
         Ok(self.data.len())
     }
+    fn sqrt(&self) -> crate::Result<Float32Tensor> {
+        let mut result_data = Vec::with_capacity(self.data.len());
+        for item in self.data.iter() {
+            result_data.push(item.sqrt());
+        }
+        Ok(Float32Tensor {
+            shape: self.shape.clone(),
+            data: result_data,
+        })
+    }
+    fn tanh(&self) -> crate::Result<Float32Tensor> {
+        let mut result_data = Vec::with_capacity(self.data.len());
+        for item in self.data.iter() {
+            result_data.push(item.tanh());
+        }
+        Ok(Float32Tensor {
+            shape: self.shape.clone(),
+            data: result_data,
+        })
+    }
+
+    fn mul_item(&self, rhs: &Self::Item) -> crate::Result<Float32Tensor> {
+        let mut result_data = Vec::with_capacity(self.data.len());
+        for item in self.data.iter() {
+            result_data.push(item * rhs);
+        }
+        Ok(Float32Tensor {
+            shape: self.shape.clone(),
+            data: result_data,
+        })
+    }
 }
 
 impl crate::BaseTensorOps for Float32Tensor {

@@ -1,4 +1,5 @@
 use infa::core::FloatTensor;
+use infa::nn::functional as F;
 use infa::nn::module::Linear;
 use infa::r#impl::{BaseTensorOps, TensorOps};
 
@@ -16,7 +17,9 @@ impl Model {
         Ok(Self { linear })
     }
     fn forward(&self, x: FloatTensor) -> infa::Result<FloatTensor> {
-        Ok(self.linear.forward(x)?)
+        let x = self.linear.forward(x)?.sqrt()?;
+        let x = F::gelu(&x)?;
+        Ok(x)
     }
 }
 

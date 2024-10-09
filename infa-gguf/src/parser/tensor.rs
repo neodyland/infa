@@ -2,12 +2,17 @@ use std::borrow::Cow;
 
 use half::{bf16, f16};
 
-pub struct GGUFFloatTensor {
+pub struct GGUFIntTensor {
     pub shape: Vec<u64>,
     pub bytes: Box<dyn crate::BaseGGUFBlock>,
     pub data_type: crate::GGMLType,
 }
 
+pub struct GGUFFloatTensor {
+    pub shape: Vec<u64>,
+    pub bytes: Box<dyn crate::BaseGGUFBlock>,
+    pub data_type: crate::GGMLType,
+}
 impl GGUFFloatTensor {
     const DEFAULT_DATA_TYPE: crate::GGMLType = crate::GGMLType::F32;
     pub fn f32_size(&self) -> usize {
