@@ -105,10 +105,10 @@ where
             |x| x.tanh(),
         )
     }
-    fn flip(&self) -> Result<T> {
+    fn neg(&self) -> Result<T> {
         self.apply(
             #[inline(always)]
-            |x| x.flip(),
+            |x| x.neg(),
         )
     }
     fn exp(&self) -> Result<T> {
@@ -128,7 +128,7 @@ pub trait NumberOps {
         Self: Sized;
     fn exp(&self) -> Self;
     fn tanh(&self) -> Self;
-    fn flip(&self) -> Self;
+    fn neg(&self) -> Self;
     fn sqrt(&self) -> Self;
     fn mul(&self, r: &Self) -> Self;
     fn add(&self, r: &Self) -> Self;
@@ -149,7 +149,7 @@ impl NumberOps for f32 {
         self + r
     }
     #[inline(always)]
-    fn flip(&self) -> Self {
+    fn neg(&self) -> Self {
         -self
     }
     #[inline(always)]

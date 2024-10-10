@@ -134,9 +134,9 @@ impl<'a> std::ops::Neg for &'a FloatTensor {
 
     fn neg(self) -> Self::Output {
         Ok(match self {
-            FloatTensor::Float32Tensor(s) => FloatTensor::Float32Tensor(s.unary()?),
+            FloatTensor::Float32Tensor(s) => FloatTensor::Float32Tensor(s.neg()?),
             #[cfg(feature = "gguf")]
-            FloatTensor::GGUFFloatTensor(s) => FloatTensor::Float32Tensor(s.unary()?),
+            FloatTensor::GGUFFloatTensor(s) => FloatTensor::Float32Tensor(s.neg()?),
         })
     }
 }
