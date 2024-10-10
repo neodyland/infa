@@ -9,13 +9,19 @@ pub struct Float32Tensor {
 impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
     fn sum(&self, dim: i64) -> crate::Result<Float32Tensor> {
         let dim = self.resolve_dim(dim)?;
-        let mut result_data = vec![0.0; self.data.len()];
+        if dim == 0 {
+            let sum = self.data.iter().sum();
+            return Ok(Float32Tensor {
+                shape: vec![1],
+                data: vec![sum],
+            });
+        }
+        let mut data = vec![0.0; self.data.len()];
         for i in 0..self.data.len() {
-            result_data[i % self.shape[dim as usize] as usize] += self.data[i];
+            data[i % self.shape[dim as usize] as usize] += self.data[i];
         }
         let mut shape = self.shape.clone();
         shape[dim as usize] = 1;
-        let data = result_data;
         Ok(Float32Tensor { shape, data })
     }
     fn item(&self) -> crate::Result<Vec<Self::Item>> {
@@ -39,6 +45,14 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
         rhs: &Float32Tensor,
         f: impl Fn(Self::Item, Self::Item) -> Self::Item,
     ) -> crate::Result<Float32Tensor> {
+        let rhs = if rhs.data.len() == 1 {
+            &Float32Tensor {
+                shape: self.shape.clone(),
+                data: vec![rhs.data[0]; self.size()? as usize],
+            }
+        } else {
+            rhs
+        };
         let mut result_data = Vec::with_capacity(self.data.len());
         for (x, y) in self.data.iter().zip(rhs.data.iter()) {
             result_data.push(f(*x, *y));
@@ -50,29 +64,26 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
     }
 
     fn matmul(&self, rhs: &Float32Tensor) -> crate::Result<Float32Tensor> {
-        if self.shape.len() != 2 || rhs.shape.len() != 2 || self.shape[1] != rhs.shape[0] {
+        let ar = self.shape[0] as usize;
+        let ac = self.shape[1] as usize;
+        let br = rhs.shape[0] as usize;
+        let bc = rhs.shape[1] as usize;
+        if ac != br {
             return Err(crate::Error::InvalidShape(
-                self.shape().clone(),
-                rhs.shape().clone(),
+                self.shape.clone(),
+                rhs.shape.clone(),
             ));
         }
-
-        let mut result_data = vec![0.0; (self.shape[0] * rhs.shape[1]) as usize];
-        for i in 0..self.shape[0] {
-            for j in 0..rhs.shape[1] {
-                for k in 0..self.shape[1] {
-                    result_data[(i * rhs.shape[1] + j) as usize] += self.data
-                        [(i * self.shape[1] + k) as usize]
-                        * rhs.data[(k * rhs.shape[1] + j) as usize];
+        let mut data = vec![0.0; ar * bc];
+        for i in 0..ar {
+            for j in 0..bc {
+                for k in 0..ac {
+                    data[i * bc + j] += self.data[i * ac + k] * rhs.data[k * bc + j];
                 }
             }
         }
-
-        let shape = vec![self.shape[0], rhs.shape[1]];
-        Ok(Float32Tensor {
-            shape,
-            data: result_data,
-        })
+        let shape = vec![ar as u64, bc as u64];
+        Ok(Float32Tensor { shape, data })
     }
 }
 

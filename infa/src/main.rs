@@ -35,13 +35,13 @@ impl Model {
         let x = F::relu(&self.linear.forward(x)?)?;
         let x = F::relu(&self.linear2.forward(x)?)?;
         let x = self.linear3.forward(x)?;
-        let x = F::log_softmax(&x, 1)?;
+        let x = F::log_softmax(&x)?;
         Ok(x)
     }
 }
 
 fn main() {
-    let x = FloatTensor::of(vec![28 * 28], 2.0).unwrap();
+    let x = FloatTensor::of(vec![28 * 28], 0.5).unwrap();
     let model = Model::new().unwrap();
     let y = model.forward(x).unwrap();
     println!("{:?} {:?}", y.shape(), &y.item().unwrap());

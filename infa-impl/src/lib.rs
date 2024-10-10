@@ -196,7 +196,7 @@ pub trait NumberOps: num_traits::Num + Clone {
 impl NumberOps for f32 {
     #[inline(always)]
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self> {
-        (0..len).map(|_| rng.gen()).collect()
+        (0..len).map(|_| rng.gen_range(0.0..1.0)).collect()
     }
 }
 
