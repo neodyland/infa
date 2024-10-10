@@ -1,5 +1,4 @@
 use infa_core::FloatTensor;
-use infa_impl::TensorOps;
 
 pub struct LayerNorm {
     pub weight: FloatTensor,

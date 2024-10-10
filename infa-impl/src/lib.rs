@@ -1,4 +1,6 @@
 mod int64;
+use core::num;
+
 pub use int64::*;
 mod int16;
 pub use int16::*;
@@ -21,10 +23,16 @@ pub enum Error {
     DequantizeError(String),
     #[error("Shape mismatch: {0:?} {1:?}")]
     ShapeMismatch(Vec<u64>, Vec<u64>),
+    #[error("Shape mismatch: {0:?} {1:?}")]
+    ShapeMismatch_(Vec<u64>, Vec<i64>),
     #[error("Invalid shape: {0:?} {1:?}")]
     InvalidShape(Vec<u64>, Vec<u64>),
+    #[error("Invalid shape: {0:?} {1:?}")]
+    InvalidShape_(Vec<u64>, Vec<i64>),
     #[error("Other error: {0}")]
     OtherError(String),
+    #[error("Invalid dim: {0}")]
+    InvalidDimension(i64),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -33,7 +41,42 @@ pub trait TensorOps<T, I>: BaseTensorOps<Item = I>
 where
     I: NumberOps,
 {
+    fn matmul(&self, rhs: &T) -> Result<T>;
     fn item(&self) -> Result<Vec<I>>;
+    fn max(&self) -> Result<I>
+    where
+        I: std::cmp::PartialOrd + num_traits::float::FloatCore,
+    {
+        let mut it = self.item()?;
+        if it.len() == 0 {
+            return Err(Error::OtherError("What? empty".to_string()));
+        }
+        for e in it.iter() {
+            if e.is_nan() {
+                return Err(Error::OtherError("Why is there NaN?".to_string()));
+            }
+        }
+        it.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        Ok((*it.first().ok_or(Error::OtherError("What?".to_string()))?).clone())
+    }
+    fn log(&self, i: I) -> Result<T>
+    where
+        I: num_traits::real::Real,
+    {
+        self.apply(
+            #[inline(always)]
+            |x| x.log(i),
+        )
+    }
+    fn ln(&self) -> Result<T>
+    where
+        I: num_traits::real::Real,
+    {
+        self.apply(
+            #[inline(always)]
+            |x| x.ln(),
+        )
+    }
     fn add(&self, rhs: &T) -> Result<T> {
         self.apply_xy(
             rhs,
@@ -45,6 +88,19 @@ where
         self.apply(
             #[inline(always)]
             |x| x.add((*rhs).clone()),
+        )
+    }
+    fn sub(&self, rhs: &T) -> Result<T> {
+        self.apply_xy(
+            rhs,
+            #[inline(always)]
+            |x, y| x.sub(y),
+        )
+    }
+    fn sub_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.apply(
+            #[inline(always)]
+            |x| x.sub((*rhs).clone()),
         )
     }
     fn mul(&self, rhs: &T) -> Result<T> {
@@ -73,8 +129,7 @@ where
             |x, y| x.div(y),
         )
     }
-    fn sum(&self) -> Result<T>;
-    fn size(&self) -> Result<usize>;
+    fn sum(&self, dim: i64) -> Result<T>;
     fn dim(&self, dim: i64) -> Result<u64> {
         let shape = self.shape();
         let index = if dim < 0 {
@@ -129,6 +184,7 @@ where
             |x| x.exp(),
         )
     }
+    fn size(&self) -> Result<usize>;
 }
 
 pub trait NumberOps: num_traits::Num + Clone {
@@ -150,9 +206,46 @@ where
 {
     type Item;
     fn shape(&self) -> &Vec<u64>;
-    fn reshape(&self, shape: Vec<u64>) -> Result<Self>
+    fn reshape(&self, shape: Vec<i64>) -> Result<Self>
     where
         Self: Sized;
+    fn resolve_dim(&self, dim: i64) -> Result<u64> {
+        let shape = self.shape();
+        let index = if dim < 0 {
+            let index = shape.len() as i64 + dim;
+            if index < 0 {
+                return Err(Error::InvalidShape(shape.clone(), vec![index as u64]));
+            }
+            index as usize
+        } else {
+            dim as usize
+        };
+        if index >= shape.len() {
+            return Err(Error::InvalidShape(shape.clone(), vec![index as u64]));
+        }
+        Ok(index as u64)
+    }
+    fn resolve_shape(&self, shape2: Vec<i64>) -> Result<Vec<u64>> {
+        let shape = self.shape().clone();
+        let mut minus_index = None;
+        let size: u64 = shape.iter().product();
+        let mut new_shape = vec![0; shape2.len()];
+        for (i, a) in shape2.iter().enumerate() {
+            if minus_index.is_some() && *a == -1 {
+                return Err(Error::InvalidShape(shape.clone(), shape));
+            }
+            if *a == -1 {
+                minus_index = Some(i);
+                new_shape[i] = 1;
+            } else {
+                new_shape[i] = *a as u64;
+            }
+        }
+        if let Some(i) = minus_index {
+            new_shape[i] = size / new_shape.iter().product::<u64>();
+        }
+        Ok(new_shape)
+    }
     fn from_values(shape: Vec<u64>, values: Vec<Self::Item>) -> Result<Self>
     where
         Self: Sized;
@@ -209,11 +302,8 @@ where
     fn mul(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.mul(rhs)
     }
-    fn sum(&self) -> Result<T> {
-        self.dequantize()?.sum()
-    }
-    fn size(&self) -> Result<usize> {
-        self.dequantize()?.size()
+    fn sum(&self, dim: i64) -> Result<T> {
+        self.dequantize()?.sum(dim)
     }
     fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T> {
         self.dequantize()?.apply(f)
@@ -223,5 +313,11 @@ where
     }
     fn div(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.div(rhs)
+    }
+    fn size(&self) -> Result<usize> {
+        self.dequantize()?.size()
+    }
+    fn matmul(&self, rhs: &T) -> Result<T> {
+        self.dequantize()?.matmul(rhs)
     }
 }

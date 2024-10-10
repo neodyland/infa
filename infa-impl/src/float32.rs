@@ -1,3 +1,5 @@
+use crate::BaseTensorOps;
+
 #[derive(Debug)]
 pub struct Float32Tensor {
     pub shape: Vec<u64>,
@@ -5,12 +7,16 @@ pub struct Float32Tensor {
 }
 
 impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
-    fn sum(&self) -> crate::Result<Float32Tensor> {
-        let sum = self.data.iter().sum();
-        Ok(Float32Tensor {
-            shape: vec![1],
-            data: vec![sum],
-        })
+    fn sum(&self, dim: i64) -> crate::Result<Float32Tensor> {
+        let dim = self.resolve_dim(dim)?;
+        let mut result_data = vec![0.0; self.data.len()];
+        for i in 0..self.data.len() {
+            result_data[i % self.shape[dim as usize] as usize] += self.data[i];
+        }
+        let mut shape = self.shape.clone();
+        shape[dim as usize] = 1;
+        let data = result_data;
+        Ok(Float32Tensor { shape, data })
     }
     fn item(&self) -> crate::Result<Vec<Self::Item>> {
         Ok(self.data.clone())
@@ -42,6 +48,32 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
             data: result_data,
         })
     }
+
+    fn matmul(&self, rhs: &Float32Tensor) -> crate::Result<Float32Tensor> {
+        if self.shape.len() != 2 || rhs.shape.len() != 2 || self.shape[1] != rhs.shape[0] {
+            return Err(crate::Error::InvalidShape(
+                self.shape().clone(),
+                rhs.shape().clone(),
+            ));
+        }
+
+        let mut result_data = vec![0.0; (self.shape[0] * rhs.shape[1]) as usize];
+        for i in 0..self.shape[0] {
+            for j in 0..rhs.shape[1] {
+                for k in 0..self.shape[1] {
+                    result_data[(i * rhs.shape[1] + j) as usize] += self.data
+                        [(i * self.shape[1] + k) as usize]
+                        * rhs.data[(k * rhs.shape[1] + j) as usize];
+                }
+            }
+        }
+
+        let shape = vec![self.shape[0], rhs.shape[1]];
+        Ok(Float32Tensor {
+            shape,
+            data: result_data,
+        })
+    }
 }
 
 impl crate::BaseTensorOps for Float32Tensor {
@@ -49,8 +81,9 @@ impl crate::BaseTensorOps for Float32Tensor {
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }
-    fn reshape(&self, shape: Vec<u64>) -> crate::Result<Self> {
-        Ok(Self {
+    fn reshape(&self, shape: Vec<i64>) -> crate::Result<Self> {
+        let shape = self.resolve_shape(shape)?;
+        Ok(Float32Tensor {
             shape,
             data: self.data.clone(),
         })

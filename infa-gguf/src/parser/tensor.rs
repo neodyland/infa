@@ -103,7 +103,8 @@ impl infa_impl::BaseTensorOps for GGUFFloatTensor {
     fn shape(&self) -> &Vec<u64> {
         &self.shape
     }
-    fn reshape(&self, shape: Vec<u64>) -> infa_impl::Result<Self> {
+    fn reshape(&self, shape: Vec<i64>) -> infa_impl::Result<Self> {
+        let shape = self.resolve_shape(shape)?;
         let size = self.data_type.size() * self.shape.iter().product::<u64>() as usize
             / self.data_type.block_size();
         Ok(Self::from_data(
