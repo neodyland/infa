@@ -2,6 +2,8 @@
 package.version = "0.0.1"
 members = ["infa", "infa-core", "infa-gguf", "infa-impl", "infa-nn", "infa-safetensors"]
 resolver = "2"
+package.description = "A minimal rust machine learning library in wip"
+package.license = "MIT"
 
 [workspace.dependencies]
 half = "2.4.1"
