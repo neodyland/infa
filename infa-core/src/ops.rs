@@ -9,25 +9,6 @@ pub enum FloatTensor {
 }
 
 impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
-    fn add(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
-        Ok(match (self, rhs) {
-            #[cfg(feature = "gguf")]
-            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.add(t2)?)
-            }
-            #[cfg(feature = "gguf")]
-            (FloatTensor::Float32Tensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t2.add(t1)?)
-            }
-            #[cfg(feature = "gguf")]
-            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.add(&t2.dequantize()?)?)
-            }
-            (FloatTensor::Float32Tensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.add(t2)?)
-            }
-        })
-    }
     fn sum(&self) -> infa_impl::Result<FloatTensor> {
         Ok(match self {
             #[cfg(feature = "gguf")]
@@ -35,27 +16,6 @@ impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
             FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.sum()?),
         })
     }
-
-    fn mul(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
-        Ok(match (self, rhs) {
-            #[cfg(feature = "gguf")]
-            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.mul(t2)?)
-            }
-            #[cfg(feature = "gguf")]
-            (FloatTensor::Float32Tensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t2.mul(t1)?)
-            }
-            #[cfg(feature = "gguf")]
-            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.mul(&t2.dequantize()?)?)
-            }
-            (FloatTensor::Float32Tensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.mul(t2)?)
-            }
-        })
-    }
-
     fn item(&self) -> infa_impl::Result<Vec<Self::Item>> {
         Ok(match self {
             #[cfg(feature = "gguf")]
@@ -77,22 +37,26 @@ impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
             FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.apply(f)?),
         })
     }
-    fn div(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
+    fn apply_xy(
+        &self,
+        rhs: &FloatTensor,
+        f: impl Fn(Self::Item, Self::Item) -> Self::Item,
+    ) -> infa_impl::Result<FloatTensor> {
         Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
             (FloatTensor::GGUFFloatTensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.div(t2)?)
+                FloatTensor::Float32Tensor(t1.apply_xy(t2, f)?)
             }
             #[cfg(feature = "gguf")]
             (FloatTensor::Float32Tensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t2.div(t1)?)
+                FloatTensor::Float32Tensor(t2.apply_xy(t1, f)?)
             }
             #[cfg(feature = "gguf")]
             (FloatTensor::GGUFFloatTensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.div(&t2.dequantize()?)?)
+                FloatTensor::Float32Tensor(t1.apply_xy(&t2.dequantize()?, f)?)
             }
             (FloatTensor::Float32Tensor(t1), FloatTensor::Float32Tensor(t2)) => {
-                FloatTensor::Float32Tensor(t1.div(t2)?)
+                FloatTensor::Float32Tensor(t1.apply_xy(t2, f)?)
             }
         })
     }

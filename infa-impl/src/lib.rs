@@ -34,18 +34,45 @@ where
     I: NumberOps,
 {
     fn item(&self) -> Result<Vec<I>>;
-    fn add(&self, rhs: &T) -> Result<T>;
-    fn add_item(&self, rhs: &Self::Item) -> Result<T> {
-        self.apply(|x| x.add(rhs))
+    fn add(&self, rhs: &T) -> Result<T> {
+        self.apply_xy(
+            rhs,
+            #[inline(always)]
+            |x, y| x.add(&y),
+        )
     }
-    fn mul(&self, rhs: &T) -> Result<T>;
+    fn add_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.apply(
+            #[inline(always)]
+            |x| x.add(rhs),
+        )
+    }
+    fn mul(&self, rhs: &T) -> Result<T> {
+        self.apply_xy(
+            rhs,
+            #[inline(always)]
+            |x, y| x.mul(&y),
+        )
+    }
     fn mul_item(&self, rhs: &Self::Item) -> Result<T> {
-        self.apply(|x| x.mul(rhs))
+        self.apply(
+            #[inline(always)]
+            |x| x.mul(rhs),
+        )
     }
     fn div_item(&self, rhs: &Self::Item) -> Result<T> {
-        self.apply(|x| x.div(rhs))
+        self.apply(
+            #[inline(always)]
+            |x| x.div(rhs),
+        )
     }
-    fn div(&self, rhs: &T) -> Result<T>;
+    fn div(&self, rhs: &T) -> Result<T> {
+        self.apply_xy(
+            rhs,
+            #[inline(always)]
+            |x, y| x.div(&y),
+        )
+    }
     fn sum(&self) -> Result<T>;
     fn size(&self) -> Result<usize>;
     fn dim(&self, dim: i64) -> Result<u64> {
@@ -65,17 +92,30 @@ where
         Ok(shape[index])
     }
     fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T>;
+    fn apply_xy(&self, rhs: &T, f: impl Fn(Self::Item, Self::Item) -> Self::Item) -> Result<T>;
     fn sqrt(&self) -> Result<T> {
-        self.apply(|x| x.sqrt())
+        self.apply(
+            #[inline(always)]
+            |x| x.sqrt(),
+        )
     }
     fn tanh(&self) -> Result<T> {
-        self.apply(|x| x.tanh())
+        self.apply(
+            #[inline(always)]
+            |x| x.tanh(),
+        )
     }
-    fn unary(&self) -> Result<T> {
-        self.apply(|x| x.minus())
+    fn flip(&self) -> Result<T> {
+        self.apply(
+            #[inline(always)]
+            |x| x.flip(),
+        )
     }
     fn exp(&self) -> Result<T> {
-        self.apply(|x| x.exp())
+        self.apply(
+            #[inline(always)]
+            |x| x.exp(),
+        )
     }
 }
 
@@ -88,7 +128,7 @@ pub trait NumberOps {
         Self: Sized;
     fn exp(&self) -> Self;
     fn tanh(&self) -> Self;
-    fn minus(&self) -> Self;
+    fn flip(&self) -> Self;
     fn sqrt(&self) -> Self;
     fn mul(&self, r: &Self) -> Self;
     fn add(&self, r: &Self) -> Self;
@@ -109,7 +149,7 @@ impl NumberOps for f32 {
         self + r
     }
     #[inline(always)]
-    fn minus(&self) -> Self {
+    fn flip(&self) -> Self {
         -self
     }
     #[inline(always)]
@@ -211,6 +251,9 @@ where
     }
     fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T> {
         self.dequantize()?.apply(f)
+    }
+    fn apply_xy(&self, rhs: &T, f: impl Fn(Self::Item, Self::Item) -> Self::Item) -> Result<T> {
+        self.dequantize()?.apply_xy(rhs, f)
     }
     fn div(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.div(rhs)
