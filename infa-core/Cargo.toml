@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 infa-gguf = { path = "../infa-gguf", optional = true }
-infa-impl = {path = "../infa-impl" }
+infa-impl = { path = "../infa-impl" }
 thiserror.workspace = true
 
 [features]

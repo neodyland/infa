@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 half.workspace = true
 thiserror.workspace = true
-infa-impl = {path = "../infa-impl" }
+infa-impl = { path = "../infa-impl" }
