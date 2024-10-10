@@ -49,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "infa"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "infa-core",
  "infa-gguf",
@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "infa-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "infa-gguf",
  "infa-impl",
@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "infa-gguf"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "half",
  "infa-impl",
@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "infa-impl"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "num-traits",
  "rand",
@@ -88,7 +88,7 @@ dependencies = [
 
 [[package]]
 name = "infa-nn"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "infa-core",
  "infa-impl",
@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "infa-safetensors"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "infa-impl",
  "safetensors",

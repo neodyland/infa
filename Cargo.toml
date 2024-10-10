@@ -1,5 +1,5 @@
 [workspace]
-package.version = "0.1.0"
+package.version = "0.0.1"
 members = [ "infa","infa-core", "infa-gguf", "infa-impl", "infa-nn", "infa-safetensors"]
 resolver = "2"
 
