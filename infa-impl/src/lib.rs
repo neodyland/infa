@@ -38,39 +38,39 @@ where
         self.apply_xy(
             rhs,
             #[inline(always)]
-            |x, y| x.add(&y),
+            |x, y| x.add(y),
         )
     }
     fn add_item(&self, rhs: &Self::Item) -> Result<T> {
         self.apply(
             #[inline(always)]
-            |x| x.add(rhs),
+            |x| x.add((*rhs).clone()),
         )
     }
     fn mul(&self, rhs: &T) -> Result<T> {
         self.apply_xy(
             rhs,
             #[inline(always)]
-            |x, y| x.mul(&y),
+            |x, y| x.mul(y),
         )
     }
     fn mul_item(&self, rhs: &Self::Item) -> Result<T> {
         self.apply(
             #[inline(always)]
-            |x| x.mul(rhs),
+            |x| x.mul((*rhs).clone()),
         )
     }
     fn div_item(&self, rhs: &Self::Item) -> Result<T> {
         self.apply(
             #[inline(always)]
-            |x| x.div(rhs),
+            |x| x.div((*rhs).clone()),
         )
     }
     fn div(&self, rhs: &T) -> Result<T> {
         self.apply_xy(
             rhs,
             #[inline(always)]
-            |x, y| x.div(&y),
+            |x, y| x.div(y),
         )
     }
     fn sum(&self) -> Result<T>;
@@ -93,25 +93,37 @@ where
     }
     fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T>;
     fn apply_xy(&self, rhs: &T, f: impl Fn(Self::Item, Self::Item) -> Self::Item) -> Result<T>;
-    fn sqrt(&self) -> Result<T> {
+    fn sqrt(&self) -> Result<T>
+    where
+        I: num_traits::real::Real,
+    {
         self.apply(
             #[inline(always)]
             |x| x.sqrt(),
         )
     }
-    fn tanh(&self) -> Result<T> {
+    fn tanh(&self) -> Result<T>
+    where
+        I: num_traits::real::Real,
+    {
         self.apply(
             #[inline(always)]
             |x| x.tanh(),
         )
     }
-    fn neg(&self) -> Result<T> {
+    fn neg(&self) -> Result<T>
+    where
+        I: std::ops::Neg<Output = I>,
+    {
         self.apply(
             #[inline(always)]
-            |x| x.neg(),
+            |x| -x,
         )
     }
-    fn exp(&self) -> Result<T> {
+    fn exp(&self) -> Result<T>
+    where
+        I: num_traits::real::Real,
+    {
         self.apply(
             #[inline(always)]
             |x| x.exp(),
@@ -119,63 +131,13 @@ where
     }
 }
 
-pub trait NumberOps {
-    fn zero() -> Self;
-    fn one() -> Self;
-    fn half() -> Self;
+pub trait NumberOps: num_traits::Num + Clone {
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self>
     where
         Self: Sized;
-    fn exp(&self) -> Self;
-    fn tanh(&self) -> Self;
-    fn neg(&self) -> Self;
-    fn sqrt(&self) -> Self;
-    fn mul(&self, r: &Self) -> Self;
-    fn add(&self, r: &Self) -> Self;
-    fn div(&self, r: &Self) -> Self;
 }
 
 impl NumberOps for f32 {
-    #[inline(always)]
-    fn div(&self, r: &Self) -> Self {
-        self / r
-    }
-    #[inline(always)]
-    fn mul(&self, r: &Self) -> Self {
-        self * r
-    }
-    #[inline(always)]
-    fn add(&self, r: &Self) -> Self {
-        self + r
-    }
-    #[inline(always)]
-    fn neg(&self) -> Self {
-        -self
-    }
-    #[inline(always)]
-    fn sqrt(&self) -> Self {
-        (*self).sqrt()
-    }
-    #[inline(always)]
-    fn exp(&self) -> Self {
-        self.exp2()
-    }
-    #[inline(always)]
-    fn tanh(&self) -> Self {
-        self.tan()
-    }
-    #[inline(always)]
-    fn half() -> Self {
-        0.5
-    }
-    #[inline(always)]
-    fn zero() -> Self {
-        0.0
-    }
-    #[inline(always)]
-    fn one() -> Self {
-        1.0
-    }
     #[inline(always)]
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self> {
         (0..len).map(|_| rng.gen()).collect()
@@ -197,15 +159,19 @@ where
     fn zeros(shape: Vec<u64>) -> Result<Self>
     where
         Self: Sized,
+        Self::Item: num_traits::ConstZero,
     {
-        let values = vec![Self::Item::zero(); shape.iter().product::<u64>() as usize];
+        use num_traits::ConstZero;
+        let values = vec![Self::Item::ZERO; shape.iter().product::<u64>() as usize];
         Self::from_values(shape, values)
     }
     fn ones(shape: Vec<u64>) -> Result<Self>
     where
         Self: Sized,
+        Self::Item: num_traits::ConstOne,
     {
-        let values = vec![Self::Item::one(); shape.iter().product::<u64>() as usize];
+        use num_traits::ConstOne;
+        let values = vec![Self::Item::ONE; shape.iter().product::<u64>() as usize];
         Self::from_values(shape, values)
     }
     fn of(shape: Vec<u64>, v: Self::Item) -> Result<Self>
