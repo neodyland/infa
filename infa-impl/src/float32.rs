@@ -5,17 +5,6 @@ pub struct Float32Tensor {
 }
 
 impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
-    fn add_item(&self, rhs: &Self::Item) -> crate::Result<Float32Tensor> {
-        let mut result_data = Vec::with_capacity(self.data.len());
-        for item in self.data.iter() {
-            result_data.push(item + rhs);
-        }
-        Ok(Float32Tensor {
-            shape: self.shape.clone(),
-            data: result_data,
-        })
-    }
-
     fn add(&self, rhs: &Float32Tensor) -> Result<Float32Tensor, crate::Error> {
         if self.shape != rhs.shape {
             return Err(crate::Error::ShapeMismatch(
@@ -75,31 +64,26 @@ impl crate::TensorOps<Float32Tensor, f32> for Float32Tensor {
     fn size(&self) -> crate::Result<usize> {
         Ok(self.data.len())
     }
-    fn sqrt(&self) -> crate::Result<Float32Tensor> {
+    fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> crate::Result<Float32Tensor> {
         let mut result_data = Vec::with_capacity(self.data.len());
         for item in self.data.iter() {
-            result_data.push(item.sqrt());
+            result_data.push(f(*item));
         }
         Ok(Float32Tensor {
             shape: self.shape.clone(),
             data: result_data,
         })
     }
-    fn tanh(&self) -> crate::Result<Float32Tensor> {
-        let mut result_data = Vec::with_capacity(self.data.len());
-        for item in self.data.iter() {
-            result_data.push(item.tanh());
+    fn div(&self, rhs: &Float32Tensor) -> crate::Result<Float32Tensor> {
+        if self.shape != rhs.shape {
+            return Err(crate::Error::ShapeMismatch(
+                self.shape.clone(),
+                rhs.shape.clone(),
+            ));
         }
-        Ok(Float32Tensor {
-            shape: self.shape.clone(),
-            data: result_data,
-        })
-    }
-
-    fn mul_item(&self, rhs: &Self::Item) -> crate::Result<Float32Tensor> {
         let mut result_data = Vec::with_capacity(self.data.len());
-        for item in self.data.iter() {
-            result_data.push(item * rhs);
+        for (a, b) in self.data.iter().zip(rhs.data.iter()) {
+            result_data.push(a / b);
         }
         Ok(Float32Tensor {
             shape: self.shape.clone(),

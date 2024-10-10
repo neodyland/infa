@@ -29,14 +29,23 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-const SQRT_TWO_OVER_PI_F32: f32 = 0.79788456080286535587989211986876373;
-
-pub trait TensorOps<T, I>: BaseTensorOps<Item = I> {
+pub trait TensorOps<T, I>: BaseTensorOps<Item = I>
+where
+    I: NumberOps,
+{
     fn item(&self) -> Result<Vec<I>>;
     fn add(&self, rhs: &T) -> Result<T>;
-    fn add_item(&self, rhs: &Self::Item) -> Result<T>;
+    fn add_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.apply(|x| x.add(rhs))
+    }
     fn mul(&self, rhs: &T) -> Result<T>;
-    fn mul_item(&self, rhs: &Self::Item) -> Result<T>;
+    fn mul_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.apply(|x| x.mul(rhs))
+    }
+    fn div_item(&self, rhs: &Self::Item) -> Result<T> {
+        self.apply(|x| x.div(rhs))
+    }
+    fn div(&self, rhs: &T) -> Result<T>;
     fn sum(&self) -> Result<T>;
     fn size(&self) -> Result<usize>;
     fn dim(&self, dim: i64) -> Result<u64> {
@@ -55,29 +64,79 @@ pub trait TensorOps<T, I>: BaseTensorOps<Item = I> {
         }
         Ok(shape[index])
     }
-    fn sqrt(&self) -> Result<T>;
-    fn tanh(&self) -> Result<T>;
+    fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T>;
+    fn sqrt(&self) -> Result<T> {
+        self.apply(|x| x.sqrt())
+    }
+    fn tanh(&self) -> Result<T> {
+        self.apply(|x| x.tanh())
+    }
+    fn unary(&self) -> Result<T> {
+        self.apply(|x| x.minus())
+    }
+    fn exp(&self) -> Result<T> {
+        self.apply(|x| x.exp())
+    }
 }
 
-pub trait NumberDefaults {
+pub trait NumberOps {
     fn zero() -> Self;
     fn one() -> Self;
     fn half() -> Self;
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self>
     where
         Self: Sized;
+    fn exp(&self) -> Self;
+    fn tanh(&self) -> Self;
+    fn minus(&self) -> Self;
+    fn sqrt(&self) -> Self;
+    fn mul(&self, r: &Self) -> Self;
+    fn add(&self, r: &Self) -> Self;
+    fn div(&self, r: &Self) -> Self;
 }
 
-impl NumberDefaults for f32 {
+impl NumberOps for f32 {
+    #[inline(always)]
+    fn div(&self, r: &Self) -> Self {
+        self / r
+    }
+    #[inline(always)]
+    fn mul(&self, r: &Self) -> Self {
+        self * r
+    }
+    #[inline(always)]
+    fn add(&self, r: &Self) -> Self {
+        self + r
+    }
+    #[inline(always)]
+    fn minus(&self) -> Self {
+        -self
+    }
+    #[inline(always)]
+    fn sqrt(&self) -> Self {
+        (*self).sqrt()
+    }
+    #[inline(always)]
+    fn exp(&self) -> Self {
+        self.exp2()
+    }
+    #[inline(always)]
+    fn tanh(&self) -> Self {
+        self.tan()
+    }
+    #[inline(always)]
     fn half() -> Self {
         0.5
     }
+    #[inline(always)]
     fn zero() -> Self {
         0.0
     }
+    #[inline(always)]
     fn one() -> Self {
         1.0
     }
+    #[inline(always)]
     fn rand(len: usize, rng: &mut impl rand::Rng) -> Vec<Self> {
         (0..len).map(|_| rng.gen()).collect()
     }
@@ -85,7 +144,7 @@ impl NumberDefaults for f32 {
 
 pub trait BaseTensorOps
 where
-    Self::Item: NumberDefaults + Clone,
+    Self::Item: NumberOps + Clone,
 {
     type Item;
     fn shape(&self) -> &Vec<u64>;
@@ -133,6 +192,7 @@ impl<T, U, I> TensorOps<T, I> for U
 where
     T: TensorOps<T, I>,
     U: Dequantize<T> + BaseTensorOps<Item = I>,
+    I: NumberOps + Clone,
 {
     fn item(&self) -> Result<Vec<T::Item>> {
         self.dequantize()?.item()
@@ -140,27 +200,19 @@ where
     fn add(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.add(rhs)
     }
-    fn add_item(&self, rhs: &I) -> Result<T> {
-        self.dequantize()?.add_item(rhs)
-    }
-
     fn mul(&self, rhs: &T) -> Result<T> {
         self.dequantize()?.mul(rhs)
     }
-
     fn sum(&self) -> Result<T> {
         self.dequantize()?.sum()
     }
     fn size(&self) -> Result<usize> {
         self.dequantize()?.size()
     }
-    fn sqrt(&self) -> Result<T> {
-        self.dequantize()?.sqrt()
+    fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> Result<T> {
+        self.dequantize()?.apply(f)
     }
-    fn tanh(&self) -> Result<T> {
-        self.dequantize()?.tanh()
-    }
-    fn mul_item(&self, rhs: &Self::Item) -> Result<T> {
-        self.dequantize()?.mul_item(rhs)
+    fn div(&self, rhs: &T) -> Result<T> {
+        self.dequantize()?.div(rhs)
     }
 }

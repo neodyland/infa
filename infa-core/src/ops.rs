@@ -9,13 +9,6 @@ pub enum FloatTensor {
 }
 
 impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
-    fn add_item(&self, rhs: &Self::Item) -> infa_impl::Result<FloatTensor> {
-        Ok(match self {
-            #[cfg(feature = "gguf")]
-            FloatTensor::GGUFFloatTensor(t1) => FloatTensor::Float32Tensor(t1.add_item(rhs)?),
-            FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.add_item(rhs)?),
-        })
-    }
     fn add(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
         Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
@@ -77,26 +70,30 @@ impl infa_impl::TensorOps<FloatTensor, f32> for FloatTensor {
             FloatTensor::Float32Tensor(t) => t.size()?,
         })
     }
-    fn sqrt(&self) -> infa_impl::Result<FloatTensor> {
+    fn apply(&self, f: impl Fn(Self::Item) -> Self::Item) -> infa_impl::Result<FloatTensor> {
         Ok(match self {
             #[cfg(feature = "gguf")]
-            FloatTensor::GGUFFloatTensor(t) => FloatTensor::Float32Tensor(t.sqrt()?),
-            FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.sqrt()?),
+            FloatTensor::GGUFFloatTensor(t1) => FloatTensor::Float32Tensor(t1.apply(f)?),
+            FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.apply(f)?),
         })
     }
-    fn tanh(&self) -> infa_impl::Result<FloatTensor> {
-        Ok(match self {
+    fn div(&self, rhs: &FloatTensor) -> infa_impl::Result<FloatTensor> {
+        Ok(match (self, rhs) {
             #[cfg(feature = "gguf")]
-            FloatTensor::GGUFFloatTensor(t) => FloatTensor::Float32Tensor(t.tanh()?),
-            FloatTensor::Float32Tensor(t) => FloatTensor::Float32Tensor(t.tanh()?),
-        })
-    }
-
-    fn mul_item(&self, rhs: &Self::Item) -> infa_impl::Result<FloatTensor> {
-        Ok(match self {
+            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::Float32Tensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.div(t2)?)
+            }
             #[cfg(feature = "gguf")]
-            FloatTensor::GGUFFloatTensor(t1) => FloatTensor::Float32Tensor(t1.mul_item(rhs)?),
-            FloatTensor::Float32Tensor(t1) => FloatTensor::Float32Tensor(t1.mul_item(rhs)?),
+            (FloatTensor::Float32Tensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
+                FloatTensor::Float32Tensor(t2.div(t1)?)
+            }
+            #[cfg(feature = "gguf")]
+            (FloatTensor::GGUFFloatTensor(t1), FloatTensor::GGUFFloatTensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.div(&t2.dequantize()?)?)
+            }
+            (FloatTensor::Float32Tensor(t1), FloatTensor::Float32Tensor(t2)) => {
+                FloatTensor::Float32Tensor(t1.div(t2)?)
+            }
         })
     }
 }
@@ -151,5 +148,31 @@ impl<'a> std::ops::Mul<&'a f32> for &'a FloatTensor {
 
     fn mul(self, rhs: &f32) -> Self::Output {
         TensorOps::mul_item(self, rhs)
+    }
+}
+impl<'a> std::ops::Div<&'a f32> for &'a FloatTensor {
+    type Output = infa_impl::Result<FloatTensor>;
+
+    fn div(self, rhs: &f32) -> Self::Output {
+        TensorOps::div_item(self, rhs)
+    }
+}
+impl<'a> std::ops::Div<&'a FloatTensor> for &'a FloatTensor {
+    type Output = infa_impl::Result<FloatTensor>;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        TensorOps::div(self, rhs)
+    }
+}
+
+impl<'a> std::ops::Neg for &'a FloatTensor {
+    type Output = infa_impl::Result<FloatTensor>;
+
+    fn neg(self) -> Self::Output {
+        Ok(match self {
+            FloatTensor::Float32Tensor(s) => FloatTensor::Float32Tensor(s.unary()?),
+            #[cfg(feature = "gguf")]
+            FloatTensor::GGUFFloatTensor(s) => FloatTensor::Float32Tensor(s.unary()?),
+        })
     }
 }
