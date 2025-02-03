@@ -1,0 +1,14 @@
+[workspace]
+resolver = "3"
+members = ["./infa", "./infa-cuda-bindings", "./infa-core"]
+package.version = "0.0.2"
+package.description = "A minimal rust machine learning library in wip"
+package.license = "MIT"
+package.repository = "https://github.com/neodyland/infa"
+
+[workspace.dependencies]
+num-traits = "0.2.19"
+thiserror = "2.0.11"
+bindgen = "0.71.1"
+half = "2.4.1"
+anyhow = "1.0.95"

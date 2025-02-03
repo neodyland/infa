@@ -1,0 +1,12 @@
+[package]
+name = "infa"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+num-traits.workspace = true
+thiserror.workspace = true
+infa-cuda-bindings.path = "../infa-cuda-bindings"
+half.workspace = true
+anyhow.workspace = true
+infa-core.path = "../infa-core"

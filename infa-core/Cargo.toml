@@ -1,0 +1,10 @@
+[package]
+name = "infa-core"
+edition = "2021"
+version.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
