@@ -1,0 +1,14 @@
+[workspace]
+resolver = "3"
+members = ["./crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+description = "A minimal rust machine learning library in wip"
+license = "MIT"
+repository = "https://github.com/neodyland/infa"
+edition = "2024"
+
+[workspace.dependencies]
+anyhow = "1.0.104"
+thiserror = "2.0.19"
